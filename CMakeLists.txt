@@ -5,7 +5,8 @@ include(CTest)
 enable_testing()
 
 add_executable(BackendTester 
-    src/Main.cpp 
+    src/JsonTest.cpp 
+    src/JsonTreeViewModel.cpp
     src/Logger.cpp 
     src/Parameters.cpp 
     src/JsonFormatter.cpp

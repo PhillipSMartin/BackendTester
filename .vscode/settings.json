@@ -48,6 +48,12 @@
         "bitset": "cpp",
         "ctime": "cpp",
         "regex": "cpp",
-        "list": "cpp"
+        "list": "cpp",
+        "iomanip": "cpp",
+        "chrono": "cpp",
+        "forward_list": "cpp",
+        "numeric": "cpp",
+        "ratio": "cpp",
+        "valarray": "cpp"
     }
 }

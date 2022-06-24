@@ -85,11 +85,9 @@ void AMQTopic::onMessage( const Message* message )
         {  
             snprintf(_buffer, BUFFERLEN, "[%s] Message #%d received:", get_topic_name().c_str(), messageCount_);
             pLogger_->Info(_buffer);
-            auto _pFormattedString = JsonFormatter::format(_textMessage->getText());
-            for (std::string const& s : *_pFormattedString)
-            {
-                pLogger_->Info(s);
-            }
+            pLogger_->Info(_textMessage->getText());
+//            auto _formattedString = JsonFormatter::format(_textMessage->getText());
+//            pLogger_->Info(_formattedString);
         } 
         else 
         {                

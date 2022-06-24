@@ -1,8 +1,20 @@
 #include "JsonFormatter.h"
+#include <iostream>
+#include <iomanip>
 
 namespace JsonFormatter
 {
-    std::shared_ptr<std::vector<std::string>> format(std::string const& json)
+    using json = nlohmann::json;
+
+    std::string format(std::string const& json_text)
+    {
+        json j = json::parse(json_text);
+        std::ostringstream os;
+        os << std::setw(4) << j << std::endl;
+        return os.str();
+    }
+
+#if 0
     {
         #define BUFFERLEN 512
         #define INDENT 2
@@ -103,4 +115,5 @@ namespace JsonFormatter
         }
         return _outputVector;
     }
+#endif
 }
