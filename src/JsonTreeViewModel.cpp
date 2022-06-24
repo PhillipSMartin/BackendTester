@@ -5,7 +5,7 @@
 
 JsonTreeViewModel::JsonTreeViewModel(std::shared_ptr<Logger> pLogger) : 
     pTreeView_(gtk_tree_view_new()),
-    pTreeStore_(gtk_tree_store_new(NUM_COLUMNS, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_POINTER, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_INT, G_TYPE_BOOLEAN)),
+    pTreeStore_(gtk_tree_store_new(NUM_COLUMNS, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_BOOLEAN)),
     pLogger_(pLogger)
 {
     GtkCellRenderer* _renderer;
@@ -15,12 +15,12 @@ JsonTreeViewModel::JsonTreeViewModel(std::shared_ptr<Logger> pLogger) :
 
     _renderer = gtk_cell_renderer_text_new();
     gtk_tree_view_append_column(GTK_TREE_VIEW(pTreeView_), 
-        gtk_tree_view_column_new_with_attributes("Key", _renderer, "text", 0, NULL));
+        gtk_tree_view_column_new_with_attributes("Key", _renderer, "text", KEY, NULL));
 
     _renderer = gtk_cell_renderer_text_new();
-    g_object_set(_renderer, "editable", TRUE, "editable-set", TRUE, NULL);
+ //   g_object_set(_renderer, "editable", TRUE, "editable-set", TRUE, NULL);
     gtk_tree_view_append_column(GTK_TREE_VIEW(pTreeView_),     
-        gtk_tree_view_column_new_with_attributes("Value", _renderer, "text", 1, NULL));
+        gtk_tree_view_column_new_with_attributes("Value", _renderer, "text", VALUE, "editable", EDITABLE, NULL));
 
     g_signal_connect(G_OBJECT(_renderer), "edited", G_CALLBACK(OnCellEdited), gpointer(this));
 }
@@ -44,7 +44,7 @@ void JsonTreeViewModel::fill_data(nlohmann::json* const pBranch, GtkTreeIter* co
         gtk_tree_store_append(pTreeStore_, &_iter, parent);
         if (_it.value().is_structured())
         {
-            gtk_tree_store_set(pTreeStore_, &_iter, KEY, _it.key().c_str(), VALUE, "", KEY_PATH, _newKeyPath, -1);
+            gtk_tree_store_set(pTreeStore_, &_iter, KEY, _it.key().c_str(), VALUE, "", KEY_PATH, _newKeyPath, EDITABLE, FALSE, -1);
             if (_it.value().size() > 0)
             {
                 fill_data(&_it.value(), &_iter, _newKeyPath);
@@ -54,7 +54,7 @@ void JsonTreeViewModel::fill_data(nlohmann::json* const pBranch, GtkTreeIter* co
         {
             std::ostringstream _os;
             _os << _it.value();
-            gtk_tree_store_set(pTreeStore_, &_iter, KEY, _it.key().c_str(), VALUE, _os.str().c_str(), KEY_PATH, _newKeyPath, POINTER, gpointer(&_it.value()), -1);
+            gtk_tree_store_set(pTreeStore_, &_iter, KEY, _it.key().c_str(), VALUE, _os.str().c_str(), KEY_PATH, _newKeyPath, EDITABLE, TRUE, -1);
         }
     }
 }
@@ -81,7 +81,11 @@ void JsonTreeViewModel::OnCellEdited(GtkCellRendererText* renderer, gchar* path,
                 *_pJson = atof(newText);
                 break;
             case nlohmann::json::value_t::string:
-                *_pJson = remove_quotes(newText);
+                {
+                    std::string s(newText);
+                    s.erase(remove(s.begin(), s.end(), '"'), s.end());
+                    *_pJson =  s.c_str();
+                }
                 break;
             case nlohmann::json::value_t::boolean:
                 *_pJson = (g_str_has_prefix(newText, "t") || g_str_has_prefix(newText, "T"));
@@ -90,7 +94,7 @@ void JsonTreeViewModel::OnCellEdited(GtkCellRendererText* renderer, gchar* path,
                 _errorMsg = g_strdup_printf("Unhandled type \"%s\" for json item \"%s\"", _pJson->type_name(), _keyPath);           
                 model->pLogger_->Error(_errorMsg);
                 g_free(_errorMsg);
-                break;
+                return;
         }
 
         std::ostringstream _os;
@@ -98,13 +102,6 @@ void JsonTreeViewModel::OnCellEdited(GtkCellRendererText* renderer, gchar* path,
         gtk_tree_store_set(model->pTreeStore_, &_iter, VALUE, _os.str().c_str(), -1);
         model->pLogger_->Debug(nlohmann::to_string(*model->get_pJson()));     
     }
-}
-
-const gchar* JsonTreeViewModel::remove_quotes(gchar* text)
-{
-    std::string s{text};
-    s.erase(remove(s.begin(), s.end(), '"'), s.end());
-    return s.c_str();
 }
 
 nlohmann::json* JsonTreeViewModel::get_json_branch(nlohmann::json* const pJson, gchar* const keyPath)

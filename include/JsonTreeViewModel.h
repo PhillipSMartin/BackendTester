@@ -19,7 +19,7 @@ class JsonTreeViewModel
             KEY = 0,
             VALUE,
             KEY_PATH,
-            POINTER,
+            EDITABLE,
             NUM_COLUMNS
         };
 
@@ -34,7 +34,6 @@ class JsonTreeViewModel
     private:
         static void OnCellEdited(GtkCellRendererText* renderer, gchar* path, gchar* newText, JsonTreeViewModel* model);
         static nlohmann::json* get_json_branch(nlohmann::json* const pJson, gchar* const keyPath);
-        static const gchar* remove_quotes(gchar* text);
 
         void fill_data(nlohmann::json* const pBranch, GtkTreeIter* const parent=NULL, gchar* const keyPath=NULL);
 };
