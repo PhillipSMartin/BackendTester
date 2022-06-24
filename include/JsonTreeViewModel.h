@@ -1,35 +1,40 @@
 #pragma once
 
+#include "Logger.h"
 #include "nlohmann/json.hpp"
 
 #include <gtk/gtk.h>
+#include <memory>
 
 class JsonTreeViewModel
 {
     private:
         GtkWidget* pTreeView_;
         GtkTreeStore* pTreeStore_;
-        nlohmann::json* pJson_;
+        std::shared_ptr<nlohmann::json> pJson_;
+        std::shared_ptr<Logger> pLogger_;
+
         enum
         {
             KEY = 0,
             VALUE,
             KEY_PATH,
             POINTER,
-            TYPE,
             NUM_COLUMNS
         };
 
     public:
-        JsonTreeViewModel(nlohmann::json* pJson) : 
-            pTreeView_(gtk_tree_view_new()),
-            pTreeStore_(gtk_tree_store_new( NUM_COLUMNS, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_POINTER, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_INT, G_TYPE_BOOLEAN)),
-            pJson_(pJson) 
-        {
-            gtk_tree_view_set_model(GTK_TREE_VIEW (pTreeView_), GTK_TREE_MODEL (pTreeStore_));
-        }
+        JsonTreeViewModel(std::shared_ptr<Logger> pLogger);
 
         GtkWidget* const get_TreeView() const { return pTreeView_; }
-        GtkTreeStore* const get_TreeStore() const { return pTreeStore_; }
-        nlohmann::json* const get_Json() const { return pJson_; }
+
+        void set_pJson(std::shared_ptr<nlohmann::json> pJson);
+        nlohmann::json* const get_pJson() const { return pJson_.get(); }
+
+    private:
+        static void OnCellEdited(GtkCellRendererText* renderer, gchar* path, gchar* newText, JsonTreeViewModel* model);
+        static nlohmann::json* get_json_branch(nlohmann::json* const pJson, gchar* const keyPath);
+        static const gchar* remove_quotes(gchar* text);
+
+        void fill_data(nlohmann::json* const pBranch, GtkTreeIter* const parent=NULL, gchar* const keyPath=NULL);
 };
