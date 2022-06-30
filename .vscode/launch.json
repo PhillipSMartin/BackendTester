@@ -9,7 +9,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${command:cmake.launchTargetPath}",
-            "args": [ "-c DEBUG" ],
+            "args": [ "-c DEBUG", "-t lh-test" ],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
             "environment": [],

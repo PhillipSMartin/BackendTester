@@ -7,14 +7,12 @@
 
 Parameters::LogLevel Parameters::StrToLogLevel(std::string const& logLevelStr)
 {
-    std::string _s = logLevelStr;
-    _s.erase(std::remove_if(_s.begin(), _s.end(), ::isspace), _s.end());
-    if (_s == "DEBUG") { return LogLevel::DEBUG; }
-    if (_s == "INFO") { return LogLevel::INFO; }
-    if (_s == "WARN") { return LogLevel::WARN; }
-    if (_s == "ERROR") { return LogLevel::ERROR; }
-    if (_s == "FATAL") { return LogLevel::FATAL; }
-    if (_s == "NONE") { return LogLevel::NONE; }
+    if ( logLevelStr == "DEBUG" ) { return LogLevel::DEBUG; }
+    if ( logLevelStr == "INFO" ) { return LogLevel::INFO; }
+    if ( logLevelStr == "WARN" ) { return LogLevel::WARN; }
+    if ( logLevelStr == "ERROR" ) { return LogLevel::ERROR; }
+    if ( logLevelStr == "FATAL" ) { return LogLevel::FATAL; }
+    if ( logLevelStr == "NONE" ) { return LogLevel::NONE; }
 
     return LogLevel::UNKNOWN;
 } 
@@ -35,6 +33,7 @@ std::string Parameters::LogLevelToStr(Parameters::LogLevel const logLevel)
 
 // returns -1 if unable to parse command-line arguments
 // valid arguments are
+//      -t<id>          tourney id
 //      -l<LogLevel>    log level for logfile
 //      -c<LogLevel>    log level for console
 // valid LogLevels are
@@ -44,23 +43,28 @@ int Parameters::ParseArguments(int const argc,
 {
     int _opt;
     int _rc = 0;
-    while ( -1 != (_opt = getopt( argc, argv, ":l:c:" )) )
+    while ( -1 != (_opt = getopt( argc, argv, ":l:c:t:" )) )
     {
-        switch ( _opt )
+        std::string _optargstring = optarg;
+        _optargstring.erase(std::remove_if(_optargstring.begin(), _optargstring.end(), ::isspace), _optargstring.end());
+       switch ( _opt )
         {
             case 'l': 
-                fileLogLevel_ = StrToLogLevel(optarg);
+                fileLogLevel_ = StrToLogLevel(_optargstring);
                 if (fileLogLevel_ == LogLevel::UNKNOWN)
                 {
                     _rc = -1;
                 }
                 break;
             case 'c': 
-                consoleLogLevel_ = StrToLogLevel(optarg);
+                consoleLogLevel_ = StrToLogLevel(_optargstring);
                 if (consoleLogLevel_ == LogLevel::UNKNOWN)
                 {
                    _rc = -1;
                 }
+                break;
+            case 't':
+                tourneyId_ = _optargstring;
                 break;
             default: 
                _rc = -1;
@@ -77,7 +81,7 @@ int Parameters::ParseArguments(int const argc,
     {
         std::cout << "Usage:" << std::endl;
         std::cout << "   -l<log level> (default is INFO)" << std::endl;
-        std::cout << "   -c<log level> (default is NONE)" << std::endl;
+        std::cout << "   -c<log level> (default is INFO)" << std::endl;
         std::cout << "       Log levels for logfile and console respectively" << std::endl;
         std::cout << "       Valid values are NONE, DEBUG, INFO, WARN, ERROR, and FATAL" << std::endl;
     }

@@ -9,17 +9,22 @@ class Parameters
 
     private:   
         LogLevel fileLogLevel_ = LogLevel::INFO;
-        LogLevel consoleLogLevel_ = LogLevel::NONE;
+        LogLevel consoleLogLevel_ = LogLevel::INFO;
+        std::string tourneyId_;
 
     public:
-        LogLevel get_fileLogLevel() const { return fileLogLevel_; }
-        void set_fileLogLevel(LogLevel const logLevel) { fileLogLevel_ = logLevel; }
+        LogLevel get_file_log_level() const { return fileLogLevel_; }
+        void set_file_log_level(LogLevel const logLevel) { fileLogLevel_ = logLevel; }
 
-        LogLevel get_consoleLogLevel() const { return consoleLogLevel_; }
-        void set_consoleLogLevel(LogLevel const logLevel) { consoleLogLevel_ = logLevel; }
+        LogLevel get_console_log_level() const { return consoleLogLevel_; }
+        void set_console_log_level(LogLevel const logLevel) { consoleLogLevel_ = logLevel; }
+
+        std::string get_tourney_id() const { return tourneyId_; }
+        void set_tourney_id(std::string const tourneyId) { tourneyId_ = tourneyId; }
         
         // returns -1 if unable to parse command-line arguments
         // valid arguments are
+        //      -t<id>          tourney id
         //      -l<LogLevel>    log level for logfile
         //      -c<LogLevel>    log level for console
         // valid LogLevels are

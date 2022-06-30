@@ -5,14 +5,18 @@ include(CTest)
 enable_testing()
 
 add_executable(BackendTester 
-    src/JsonTest.cpp 
-    src/JsonTreeViewModel.cpp
-    src/Logger.cpp 
-    src/Parameters.cpp 
-    src/JsonFormatter.cpp
     src/AMQClient.cpp
-    src/AMQTopic.cpp)
- 
+    src/AMQTopic.cpp
+    src/JsonFormatter.cpp
+    src/JsonTest.cpp 
+    src/JsonTreeView.cpp
+    src/Logger.cpp 
+    src/MessageWindow.cpp
+    src/Parameters.cpp 
+    src/TemplateChooser.cpp
+    src/TemplateMap.cpp
+    src/TopicChooser.cpp)
+
 target_link_directories(BackendTester PUBLIC lib ../Bridge/backend/lib)
 
 target_include_directories(BackendTester 
@@ -60,6 +64,8 @@ PUBLIC
     gobject-2.0 
     glib-2.0
     )
+
+configure_file(src/Event.tb.templates.txt Event.tb.templates.txt COPYONLY)
 
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})
