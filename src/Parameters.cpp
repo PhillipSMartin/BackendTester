@@ -1,11 +1,11 @@
-#include "Parameters.h"
-
 #include <algorithm>
 #include <cctype>
 #include <iostream>
 #include <unistd.h>
 
-Parameters::LogLevel Parameters::StrToLogLevel(std::string const& logLevelStr)
+#include "Parameters.h"
+
+Parameters::LogLevel Parameters::StrToLogLevel( std::string const& logLevelStr )
 {
     if ( logLevelStr == "DEBUG" ) { return LogLevel::DEBUG; }
     if ( logLevelStr == "INFO" ) { return LogLevel::INFO; }
@@ -17,7 +17,7 @@ Parameters::LogLevel Parameters::StrToLogLevel(std::string const& logLevelStr)
     return LogLevel::UNKNOWN;
 } 
 
-std::string Parameters::LogLevelToStr(Parameters::LogLevel const logLevel)
+std::string Parameters::LogLevelToStr( Parameters::LogLevel const logLevel )
 {
     switch (logLevel)
     {
@@ -31,53 +31,52 @@ std::string Parameters::LogLevelToStr(Parameters::LogLevel const logLevel)
    }
 }
 
-// returns -1 if unable to parse command-line arguments
+// returns FALSE if unable to parse command-line arguments
 // valid arguments are
 //      -t<id>          tourney id
 //      -l<LogLevel>    log level for logfile
 //      -c<LogLevel>    log level for console
 // valid LogLevels are
 //      DEBUG, INFO, WARN, ERROR, FATAL
-int Parameters::ParseArguments(int const argc,
-    char** const& argv)
+gboolean Parameters::ParseArguments( int const argc, char** const& argv )
 {
     int _opt;
-    int _rc = 0;
+    gboolean _rc = TRUE;
     while ( -1 != (_opt = getopt( argc, argv, ":l:c:t:" )) )
     {
         std::string _optargstring = optarg;
-        _optargstring.erase(std::remove_if(_optargstring.begin(), _optargstring.end(), ::isspace), _optargstring.end());
-       switch ( _opt )
+        _optargstring.erase( std::remove_if( _optargstring.begin(), _optargstring.end(), ::isspace ), _optargstring.end() );
+       switch (_opt)
         {
             case 'l': 
-                fileLogLevel_ = StrToLogLevel(_optargstring);
-                if (fileLogLevel_ == LogLevel::UNKNOWN)
+                fileLogLevel_ = StrToLogLevel( _optargstring );
+                if ( fileLogLevel_ == LogLevel::UNKNOWN )
                 {
-                    _rc = -1;
+                    _rc = FALSE;
                 }
                 break;
             case 'c': 
-                consoleLogLevel_ = StrToLogLevel(_optargstring);
-                if (consoleLogLevel_ == LogLevel::UNKNOWN)
+                consoleLogLevel_ = StrToLogLevel( _optargstring );
+                if ( consoleLogLevel_ == LogLevel::UNKNOWN )
                 {
-                   _rc = -1;
+                   _rc = FALSE;
                 }
                 break;
             case 't':
                 tourneyId_ = _optargstring;
                 break;
             default: 
-               _rc = -1;
+               _rc = FALSE;
                 break;
          }
     }
 
-    if (optind < argc)
+    if ( optind < argc )
     {
-            _rc = -1;
+            _rc = FALSE;
     }
 
-    if (_rc < 0)
+    if ( !_rc )
     {
         std::cout << "Usage:" << std::endl;
         std::cout << "   -l<log level> (default is INFO)" << std::endl;

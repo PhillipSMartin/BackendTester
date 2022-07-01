@@ -3,43 +3,43 @@
 #include <gtk/gtk.h>
 #include <sstream>
 
-JsonTreeView::JsonTreeView(std::shared_ptr<Logger> pLogger) : 
+JsonTreeView::JsonTreeView(Logger* pLogger) : 
     pParent_(gtk_scrolled_window_new( NULL, NULL )),
     pTreeView_(gtk_tree_view_new()),
     pTreeStore_(gtk_tree_store_new(NUM_COLUMNS, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_BOOLEAN)),
     pLogger_(pLogger)
 {
     // add tree view to parent
-    gtk_scrolled_window_set_policy( GTK_SCROLLED_WINDOW(pParent_), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC );
-    gtk_container_add( GTK_CONTAINER(pParent_), pTreeView_ );
+    gtk_scrolled_window_set_policy( GTK_SCROLLED_WINDOW( pParent_ ), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC );
+    gtk_container_add( GTK_CONTAINER( pParent_ ), pTreeView_ );
 
     // add model to tree view
-    gtk_tree_view_set_model( GTK_TREE_VIEW(pTreeView_), GTK_TREE_MODEL(pTreeStore_) );
-    g_object_unref(pTreeStore_);
+    gtk_tree_view_set_model( GTK_TREE_VIEW( pTreeView_ ), GTK_TREE_MODEL( pTreeStore_ ) );
+    g_object_unref( pTreeStore_ );
 
     // add columns to tree view
     GtkCellRenderer* _renderer = gtk_cell_renderer_text_new();
-    gtk_tree_view_append_column( GTK_TREE_VIEW(pTreeView_), 
+    gtk_tree_view_append_column( GTK_TREE_VIEW( pTreeView_ ), 
         gtk_tree_view_column_new_with_attributes( "Key", _renderer, "text", KEY, NULL ) );
 
     _renderer = gtk_cell_renderer_text_new();
-    gtk_tree_view_append_column( GTK_TREE_VIEW(pTreeView_),     
+    gtk_tree_view_append_column( GTK_TREE_VIEW( pTreeView_ ),     
         gtk_tree_view_column_new_with_attributes( "Value", _renderer, "text", VALUE, "editable", EDITABLE, NULL ) );
 
     // wire "edited" signal
-    g_signal_connect(G_OBJECT(_renderer), "edited", G_CALLBACK(OnCellEdited), gpointer(this));
+    g_signal_connect( G_OBJECT( _renderer ), "edited", G_CALLBACK( OnCellEdited ), gpointer(this) );
 }
 
-void JsonTreeView::set_message( std::shared_ptr<nlohmann::json> pJson, gboolean expandFirstRow ) 
+void JsonTreeView::set_message( nlohmann::json const& json, gboolean expandFirstRow ) 
 { 
-    pJson_  = pJson; 
-    gtk_tree_store_clear(pTreeStore_);
-    fill_data(pJson_.get()); 
+    json_  = json; 
+    gtk_tree_store_clear( pTreeStore_ );
+    fill_data(&json_); 
 
     if ( expandFirstRow )
     {
         GtkTreePath* _firstRow = gtk_tree_path_new_first();
-        gtk_tree_view_expand_row( GTK_TREE_VIEW(pTreeView_), _firstRow, FALSE );
+        gtk_tree_view_expand_row( GTK_TREE_VIEW( pTreeView_) , _firstRow, FALSE );
         gtk_tree_path_free( _firstRow );
     }
 }
@@ -49,7 +49,7 @@ void JsonTreeView::fill_data( nlohmann::json* const pBranch, GtkTreeIter* const 
     GtkTreeIter _iter; 
     for ( auto& _it : pBranch->items() )
     {
-        gchar* _newKeyPath = (parent == NULL) ?
+        gchar* _newKeyPath = ( parent == NULL ) ?
                 g_strdup( _it.key().c_str() ) :
                 g_strjoin( ":", keyPath, _it.key().c_str(), NULL );
          
@@ -75,7 +75,7 @@ void JsonTreeView::OnCellEdited( GtkCellRendererText* renderer, gchar* path, gch
 {
     GtkTreeIter _iter;
  
-    if ( gtk_tree_model_get_iter_from_string( GTK_TREE_MODEL(model->pTreeStore_), &_iter, path ) )
+    if ( gtk_tree_model_get_iter_from_string( GTK_TREE_MODEL( model->pTreeStore_ ), &_iter, path ) )
     {
         gchar* _typeName;
         gchar* _keyPath;
@@ -111,7 +111,7 @@ void JsonTreeView::OnCellEdited( GtkCellRendererText* renderer, gchar* path, gch
 
         std::ostringstream _os;
         _os << *_pJson;
-        gtk_tree_store_set( model->pTreeStore_, &_iter, VALUE, _os.str().c_str(), -1) ;
+        gtk_tree_store_set( model->pTreeStore_, &_iter, VALUE, _os.str().c_str(), -1 );
         model->pLogger_->Debug( nlohmann::to_string( *model->get_pJson() ) );     
     }
 }

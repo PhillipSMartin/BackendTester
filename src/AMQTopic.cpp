@@ -3,15 +3,15 @@
 
 AMQTopic::AMQTopic(std::string const& topicName, 
         ActiveMQSession* const& pSession, 
-        std::shared_ptr<Logger> const& pLogger) : 
+        Logger* pLogger) : 
     pTopic_(pSession->createTopic(topicName)), 
     pSession_(pSession),
     pLogger_(pLogger) 
-    {
-        char _buffer[BUFFERLEN];     
-        snprintf( _buffer, BUFFERLEN, "Created topic [%s]", get_topic_name().c_str());
-        pLogger_->Info(_buffer);
-    }
+{
+    gchar* _buffer = g_strdup_printf( "Created topic [%s]", get_topic_name().c_str() );
+    pLogger_->Info( _buffer );
+    g_free( _buffer );
+}
 
 void AMQTopic::stop() 
 { 
@@ -26,47 +26,48 @@ void AMQTopic::stop()
    delete pTopic_; 
 }
 
-void AMQTopic::send_text_message(std::string const& textMessage) 
+void AMQTopic::send_text_message( std::string const& textMessage ) 
 {
     auto _textMessage = pSession_->createTextMessage();
-    _textMessage->setText(textMessage);
-    get_producer_ptr()->send(_textMessage);
+    _textMessage->setText( textMessage );
+    get_producer_ptr()->send( _textMessage );
 
-    char _buffer[BUFFERLEN];     
-    snprintf( _buffer, BUFFERLEN, "Sent text message for topic [%s]: %s", get_topic_name().c_str(), textMessage.c_str());
-    pLogger_->Info(_buffer);
+    gchar* _buffer = g_strdup_printf( "Sent text message for topic [%s]: %s", get_topic_name().c_str(), textMessage.c_str() );
+    pLogger_->Info( _buffer );
+    g_free( _buffer );
 
     delete _textMessage;
 }
 
 void AMQTopic::subscribe()
 {
-    char _buffer[BUFFERLEN]; 
-    if (pConsumer_ == nullptr)
+    gchar* _buffer = NULL; 
+    if ( pConsumer_ == nullptr )
     {
-        pConsumer_ = pSession_->createConsumer(pTopic_);
-        pConsumer_->setMessageListener(static_cast<MessageListener*>(this));
+        pConsumer_ = pSession_->createConsumer( pTopic_ );
+        pConsumer_->setMessageListener( static_cast<MessageListener*>(this) );
         
-        snprintf( _buffer, BUFFERLEN, "Subscribed to topic [%s]", get_topic_name().c_str());
-        pLogger_->Info(_buffer);
+        _buffer = g_strdup_printf( "Subscribed to topic [%s]", get_topic_name().c_str() );
+        pLogger_->Info( _buffer );
     }
     else
     {
-        snprintf( _buffer, BUFFERLEN, "Already subscribed to topic [%s]", get_topic_name().c_str());
-        pLogger_->Info(_buffer);
+        _buffer = g_strdup_printf( "Already subscribed to topic [%s]", get_topic_name().c_str() );
+        pLogger_->Info( _buffer );
     }
+    g_free( _buffer );
 }
 
 cms::MessageProducer* AMQTopic::get_producer_ptr()
 {
-    if (pProducer_ == nullptr)
+    if ( pProducer_ == nullptr )
     {
-        pProducer_ = pSession_->createProducer(pTopic_);
+        pProducer_ = pSession_->createProducer( pTopic_ );
         pProducer_->setDeliveryMode( DeliveryMode::NON_PERSISTENT );
 
-        char _buffer[BUFFERLEN]; 
-        snprintf( _buffer, BUFFERLEN, "Created producer for topic [%s]", get_topic_name().c_str());
-        pLogger_->Info(_buffer);
+        gchar* _buffer = g_strdup_printf( "Created producer for topic [%s]", get_topic_name().c_str() );
+        pLogger_->Info( _buffer );
+        g_free( _buffer );
     }
 
     return pProducer_;
@@ -74,7 +75,7 @@ cms::MessageProducer* AMQTopic::get_producer_ptr()
 
 void AMQTopic::onMessage( const Message* message ) 
 { 
-    char _buffer[BUFFERLEN];  
+    gchar* _buffer = NULL;
   
     try        
     {   
@@ -83,23 +84,23 @@ void AMQTopic::onMessage( const Message* message )
         const TextMessage* _textMessage = static_cast< const TextMessage* >( message );
         if( _textMessage != NULL ) 
         {  
-            snprintf(_buffer, BUFFERLEN, "[%s] Message #%d received:", get_topic_name().c_str(), messageCount_);
-            pLogger_->Info(_buffer);
-            pLogger_->Info(_textMessage->getText());
-//            auto _formattedString = JsonFormatter::format(_textMessage->getText());
-//            pLogger_->Info(_formattedString);
+            _buffer = g_strdup_printf( "[%s] Message #%d received:", get_topic_name().c_str(), messageCount_ );
+            pLogger_->Info( _buffer );
+            pLogger_->Info( _textMessage->getText() );
         } 
         else 
         {                
-            snprintf( _buffer, BUFFERLEN, "[%s] Message #%d is not a text message", get_topic_name().c_str(), messageCount_);
-            pLogger_->Error(_buffer);          
+            _buffer = g_strdup_printf( "[%s] Message #%d is not a text message", get_topic_name().c_str(), messageCount_ );
+            pLogger_->Error( _buffer );          
         }
         
         message->acknowledge();  
     }
     catch (CMSException& e) 
     {
-        snprintf( _buffer, BUFFERLEN, "[%s] Error reading message #%d: %s", get_topic_name().c_str(), messageCount_, e.what());
-        pLogger_->Error(_buffer);
-    }   
+        _buffer = g_strdup_printf( "[%s] Error reading message #%d: %s", get_topic_name().c_str(), messageCount_, e.what() );
+        pLogger_->Error( _buffer );
+    } 
+
+    g_free( _buffer );  
 }

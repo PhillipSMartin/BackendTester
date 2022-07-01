@@ -1,7 +1,6 @@
 #pragma once
 
-#include <map>
-#include <memory>
+#include <unordered_map>
 #include <string>
 #include <utility>
 #include <vector>
@@ -11,11 +10,11 @@
 class TemplateMap
 {
     private:
-        std::shared_ptr<Logger> pLogger_;
-        std::map<std::string, std::pair<std::string, std::string>>  map_;
+        Logger* pLogger_;
+        std::unordered_map<std::string, std::pair<std::string, std::string>>  map_;
 
     public:
-        TemplateMap(std::shared_ptr<Logger> pLogger);
+        TemplateMap(Logger* pLogger);
         gboolean import_file( std::string const& fileName );
         std::vector<std::string> get_keys() const;
         std::string get_template( std::string const& key ) const;

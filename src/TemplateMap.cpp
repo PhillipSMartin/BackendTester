@@ -3,7 +3,7 @@
 
 #include "TemplateMap.h"
 
-TemplateMap::TemplateMap(std::shared_ptr<Logger> pLogger) : pLogger_(pLogger) 
+TemplateMap::TemplateMap(Logger* pLogger) : pLogger_(pLogger) 
 {
 }
 
@@ -17,7 +17,7 @@ gboolean TemplateMap::import_file( std::string const& fileName )
 
     gchar* _line;
     GIOStatus _status = G_IO_STATUS_NORMAL;
-    while ( G_IO_STATUS_NORMAL ==  (_status = g_io_channel_read_line( _channel, &_line, NULL, NULL, &error )))
+    while ( G_IO_STATUS_NORMAL ==  ( _status = g_io_channel_read_line( _channel, &_line, NULL, NULL, &error ) ) )
     {
         if ( !add_template_to_map( _line ) )
         {
@@ -37,9 +37,9 @@ gboolean TemplateMap::import_file( std::string const& fileName )
 std::vector<std::string> TemplateMap::get_keys() const
 {
     std::vector<std::string> _keys;
-    for (auto _item : map_ )
+    for ( auto _item : map_ )
     {
-        _keys.push_back(_item.first);
+        _keys.push_back( _item.first );
     }
     return _keys;
 }
@@ -83,9 +83,9 @@ gboolean TemplateMap::add_template_to_map( gchar* const line )
         return FALSE;
 
     std::getline( _sstream, _help, '|' );
-    std::replace(_help.begin(), _help.end(), ';', '\n');
+    std::replace( _help.begin(), _help.end(), ';', '\n' );
 
-    map_[_key] = std::pair<std::string, std::string>(_template, _help);   
+    map_[_key] = std::pair<std::string, std::string>( _template, _help );   
     return TRUE;
 }
 
@@ -98,10 +98,10 @@ gboolean TemplateMap::handle_error( std::string const& prefix, std::string const
 
 gboolean TemplateMap::handle_error( std::string const& prefix, GError* error ) const
 {
-    if (error != NULL)
+    if ( error != NULL )
     {
         handle_error( prefix, error->message );
-        g_clear_error( &error) ;
+        g_clear_error( &error );
         return TRUE;
     }
 

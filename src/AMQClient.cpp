@@ -1,6 +1,7 @@
+#include <gtk/gtk.h>
 #include "AMQClient.h"
   
-AMQClient::AMQClient(std::shared_ptr<Logger> const& pLogger) : pLogger_(pLogger)
+AMQClient::AMQClient(Logger* pLogger) : pLogger_(pLogger)
 {
     // initialize the activeMQ Library
     activemq::library::ActiveMQCPP::initializeLibrary();
@@ -14,39 +15,39 @@ AMQClient::AMQClient(std::shared_ptr<Logger> const& pLogger) : pLogger_(pLogger)
     pConnection_->setExceptionListener(static_cast<ExceptionListener*>(this));
 
     // create a session
-    pSession_ = pConnection_->createSession(cms::Session::AUTO_ACKNOWLEDGE);
-    pLogger_->Info("Created ActiveMQ session");
+    pSession_ = pConnection_->createSession( cms::Session::AUTO_ACKNOWLEDGE );
+    pLogger_->Info( "Created ActiveMQ session" );
 }
 
 
-void AMQClient::send_text_message(std::string const& topicName, std::string const& textMessage)
+void AMQClient::send_text_message( std::string const& topicName, std::string const& textMessage )
 {
     if (started_)
     {
-        get_topic_ptr(topicName)->send_text_message(textMessage);
+        get_topic_ptr( topicName )->send_text_message( textMessage );
     }
     else
     {
-        pLogger_->Error("Cannot send text message before client is started");
+        pLogger_->Error( "Cannot send text message before client is started" );
     }
 }
 
-void AMQClient::subscribe(std::string const& topicName)
+void AMQClient::subscribe( std::string const& topicName )
 {
-    get_topic_ptr(topicName)->subscribe();
+    get_topic_ptr( topicName )->subscribe();
 }
 
-std::shared_ptr<AMQTopic> AMQClient::get_topic_ptr(std::string const& topicName)
+AMQTopic* AMQClient::get_topic_ptr( std::string const& topicName )
 {
  
-    auto _it = topics_.find(topicName);
-    if (_it != topics_.end())
+    auto _it = topics_.find( topicName );
+    if ( _it != topics_.end() )
     {
         return _it->second;
     }
     else
     {
-        topics_.emplace(topicName, std::make_shared<AMQTopic>(topicName, pSession_, pLogger_));
+        topics_.emplace( topicName,  new AMQTopic(topicName, pSession_, pLogger_) );
         return topics_[topicName];
     }
 }
@@ -56,37 +57,39 @@ void AMQClient::start()
     pConnection_->start();
     started_ = true;
 
-    pLogger_->Info("ActiveMQ connection started");
+    pLogger_->Info( "ActiveMQ connection started" );
 }
 
 void AMQClient::stop()
 {
     started_ = false;
-    for (auto _topic : topics_)
+    for ( auto _topic : topics_ )
     {
         _topic.second->stop();
+        delete _topic.second;
     }
+    topics_.clear();
     delete pSession_;
     delete pConnection_;
     activemq::library::ActiveMQCPP::shutdownLibrary();
 
-    pLogger_->Info("ActiveMQ connection stopped");
+    pLogger_->Info( "ActiveMQ connection stopped" );
 }
 
-void AMQClient::onException( const CMSException& e) 
+void AMQClient::onException( const CMSException& e ) 
 {   
-    char _buffer[BUFFERLEN];     
-    snprintf( _buffer, BUFFERLEN, "Shutting down client. CMS Exception occurred: %s", e.what());
-    pLogger_->Fatal(_buffer);        
-    exit(1);    
+    gchar* _buffer = g_strdup_printf( "Shutting down client. CMS Exception occurred: %s", e.what() ) ;   
+    pLogger_->Fatal( _buffer ); 
+    g_free( _buffer ) ;      
+    exit( 1 );    
 }
 
 void AMQClient::transportInterrupted() 
 {        
-    pLogger_->Info("The connection's transport has been interrupted");    
+    pLogger_->Info( "The connection's transport has been interrupted" );    
 }
 
 void AMQClient::transportResumed() 
 {        
-    pLogger_->Info("The connection's transport has been restarted");    
+    pLogger_->Info( "The connection's transport has been restarted" );    
 }

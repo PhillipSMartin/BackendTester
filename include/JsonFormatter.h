@@ -1,12 +1,12 @@
 #pragma once
 
-#include "nlohmann/json.hpp"
-#include <memory>
 #include <string>
-#include <vector>
+
+#include "Logger.h"
+#include "nlohmann/json.hpp"
 
 namespace JsonFormatter
 {
- //   std::shared_ptr<std::vector<std::string>> format(std::string const& json);
-   std::string format(std::string const& json);
+   std::string format( std::string const&, std::shared_ptr<Logger> );
+   std::string format( nlohmann::json const&, std::shared_ptr<Logger> );
 }

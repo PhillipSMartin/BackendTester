@@ -1,20 +1,18 @@
+#include <gtk/gtk.h>
+#include <iostream>
+
 #include "activemq.h"
 #include "AMQClient.h"
 #include "JsonFormatter.h"
 #include "Logger.h"
 #include "Parameters.h"
 
-#include <gtk/gtk.h>
-#include <iostream>
-#include <memory>
-
-
 int main(int argc, char** argv) 
 {
      
     // build Parameters instance from command-line arguments
-    auto _pParms = std::make_shared<Parameters>();
-    if (0 != _pParms->ParseArguments(argc, argv))
+    Parameters _parms{};
+    if (0 != _parms.ParseArguments(argc, argv))
     {
         exit(0);
     }
@@ -28,8 +26,8 @@ int main(int argc, char** argv)
     g_signal_connect(G_OBJECT(_window), "destroy", G_CALLBACK(gtk_main_quit), NULL); 
 
     // start Logger
-    auto _pLogger = std::make_shared<Logger>(_pParms);
-    _pLogger->Info("Backend Tester started");
+    Logger _logger(_parms);
+    _logger.Info("Backend Tester started");
 
     // start ActiveMQ session
     AMQClient _session(_pLogger);
@@ -45,5 +43,5 @@ int main(int argc, char** argv)
     // send the message and delete it
     _session.send_text_message("Event.tb=lh-test-1", "Test text message");
     _session.stop();
-    _pLogger->Info("Backend Tester exited");
+    _logger.Info("Backend Tester exited");
 }

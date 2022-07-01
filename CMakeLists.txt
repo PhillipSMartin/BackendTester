@@ -7,11 +7,11 @@ enable_testing()
 add_executable(BackendTester 
     src/AMQClient.cpp
     src/AMQTopic.cpp
+    src/Dashboard.cpp
     src/JsonFormatter.cpp
     src/JsonTest.cpp 
     src/JsonTreeView.cpp
     src/Logger.cpp 
-    src/MessageWindow.cpp
     src/Parameters.cpp 
     src/TemplateChooser.cpp
     src/TemplateMap.cpp
