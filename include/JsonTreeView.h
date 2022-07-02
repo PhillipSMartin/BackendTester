@@ -13,7 +13,7 @@ class JsonTreeView
         GtkWidget* pParent_;                    // a scrolled window to contain the tree view
         GtkWidget* pTreeView_;                  // the tree view
         GtkTreeStore* pTreeStore_;              // the model associated with the tree view
-        nlohmann::json json_;                   // the json message to be displayed in the tree view
+        std::shared_ptr<nlohmann::json> pJson_; // the json message to be displayed in the tree view
 
         enum
         {
@@ -29,11 +29,11 @@ class JsonTreeView
 
         GtkWidget* const get_parent() const { return pParent_; }
 
-        void set_message( nlohmann::json const& json, gboolean expandFirstRow = FALSE );
-        nlohmann::json* get_pJson() { return &json_; }
-
+        void set_contents( std::shared_ptr<nlohmann::json> pJson, gboolean expandFirstRow = FALSE );
+        std::string get_json_string() const { return nlohmann::to_string( *pJson_ ); }
+ 
     private:
-        static void OnCellEdited( GtkCellRendererText* renderer, gchar* path, gchar* newText, JsonTreeView* model );
+        static void OnCellEdited( GtkCellRendererText* renderer, gchar* path, gchar* newText, JsonTreeView* treeView );
         static nlohmann::json* const get_json_branch( nlohmann::json* const pJson, const gchar* keyPath );
 
         void fill_data( nlohmann::json* const pBranch, GtkTreeIter* const parent = NULL, const gchar* keyPath = NULL );

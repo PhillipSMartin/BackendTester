@@ -36,6 +36,15 @@ Dashboard::Dashboard(Parameters* pParms, Logger* pLogger) :
     g_signal_emit_by_name( G_OBJECT( publishTopicChooser_.get_combo_box() ), "changed" );
 }
 
+Dashboard::~Dashboard()
+{
+    for ( auto item : templateMaps_ )
+    {
+        free( item.second );
+    }
+    templateMaps_.clear();
+}
+
 GtkWidget* Dashboard::console_window_new()
 {
     GtkWidget* _pScrolledConsoleWindow = gtk_scrolled_window_new( NULL, NULL );
@@ -107,6 +116,7 @@ GtkWidget* Dashboard::control_panel_new()
     // add buttons
     GtkWidget* _pBoxButtons = gtk_box_new( GTK_ORIENTATION_HORIZONTAL, 10 );
     GtkWidget* _pButtonSave = gtk_button_new_with_label( "Save" );
+    g_signal_connect( G_OBJECT( _pButtonSave ), "clicked", G_CALLBACK( OnSaveButtonClicked ), gpointer(this) );
     gtk_box_pack_start( GTK_BOX( _pBoxButtons) , _pButtonSave, TRUE, TRUE, 0 );  
     gtk_box_pack_start( GTK_BOX( _pControlPanel ), _pBoxButtons, FALSE, TRUE, 0 );  
 
@@ -133,7 +143,7 @@ void Dashboard::OnMessageSampleSelectionChanged( GtkComboBox* pComboBox, Dashboa
         pDashboard->set_help_message( _templateMap->get_help ( _id ).c_str() );
         try
         {
-            pDashboard->set_publish_message( nlohmann::json::parse( _templateMap->get_template ( _id ) ) );
+            pDashboard->set_publish_message( std::make_shared<nlohmann::json>(nlohmann::json::parse( _templateMap->get_template ( _id ) )) );
         }
         catch(const std::exception& e)
         {
@@ -179,9 +189,9 @@ void Dashboard::OnSubscribeButtonToggled( GtkToggleButton* pButton, Dashboard* p
    }
 }
 
-std::shared_ptr<TemplateMap> Dashboard::get_template_map( gchar* const topic )
+TemplateMap* Dashboard::get_template_map( gchar* const topic )
 {
-    std::shared_ptr<TemplateMap> _map = NULL;
+    TemplateMap* _map = NULL;
 
     auto _it = templateMaps_.find( topic );
     if ( _it == templateMaps_.end() )
@@ -190,9 +200,11 @@ std::shared_ptr<TemplateMap> Dashboard::get_template_map( gchar* const topic )
         std::string _fileName( topic );
         _fileName += ".templates.txt";
 
-        _map = std::make_shared<TemplateMap>( pLogger_ );
-        if ( !_map->import_file( _fileName ) )
+        _map = new TemplateMap( pLogger_ );
+        if (  0 > _map->import_file( _fileName ) )
+        {
             return NULL; // error will be logged by import_file
+        }
 
         templateMaps_[topic] = _map;
     }
@@ -204,9 +216,9 @@ std::shared_ptr<TemplateMap> Dashboard::get_template_map( gchar* const topic )
     return _map;
 }
 
-std::shared_ptr<TemplateMap> Dashboard::get_current_template_map() const
+TemplateMap* Dashboard::get_current_template_map() const
 {
-    std::shared_ptr<TemplateMap> _map = NULL;
+    TemplateMap* _map = NULL;
     gchar* _topic = gtk_combo_box_text_get_active_text( GTK_COMBO_BOX_TEXT( publishTopicChooser_.get_combo_box() ) );
     auto _it = templateMaps_.find( _topic );
     if ( _it != templateMaps_.end() )
@@ -235,6 +247,14 @@ void Dashboard::OnPublishTopicSelectionChanged( GtkComboBox* pComboBox, Dashboar
     }
 }
 
+void Dashboard::OnSaveButtonClicked( GtkButton* pButton, Dashboard* pDashboard )
+{
+    auto _templateMap = pDashboard->get_current_template_map();
+    if ( _templateMap )
+    { 
+        _templateMap->export_file();
+    }   
+}
 void Dashboard::OnSubscribeTopicSelectionChanged( GtkComboBox* pComboBox, Dashboard* pDashboard )
 {
 

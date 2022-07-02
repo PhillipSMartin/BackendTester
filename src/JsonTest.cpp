@@ -20,7 +20,7 @@ int main( int argc, char** argv )
      _logger.Info( "Backend Tester started" );
 
     // create json object from test string
-    auto _json = nlohmann::json::parse( _json_string );
+    auto _json = std::make_shared<nlohmann::json>( nlohmann::json::parse( _json_string ) );
 
     // set up GUI
     gtk_init( &argc, &argv );

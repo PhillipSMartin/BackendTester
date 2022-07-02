@@ -1,7 +1,7 @@
 #pragma once
 
 #include <gtk/gtk.h>
-#include <unordered_map>
+#include <map>
 #include <set>
 
 #include "JsonTreeView.h"
@@ -36,14 +36,16 @@ class Dashboard
         std::set<std::string> subscribedTopics_;  // a list of topics we've subscribed to
         gboolean ignoreSubscribeButtonClick_ = FALSE; // set when we are changing the active state of the subscribe button programattically
 
-        std::unordered_map<std::string, std::shared_ptr<TemplateMap>> templateMaps_; // keyed by topic prefix
+        std::map<std::string, TemplateMap*> templateMaps_; // keyed by topic prefix
 
     public:
         Dashboard(Parameters* pParms, Logger* pLogger);
+        ~Dashboard();
+        
         GtkWidget* const get_parent() const { return pParent_; }
 
-        void set_publish_message( nlohmann::json const& json, gboolean expandFirstRow = FALSE ) { publishTreeView_.set_message( json, expandFirstRow ); }
-        void set_subscribe_message( nlohmann::json const& json, gboolean expandFirstRow = TRUE ) { subscribeTreeView_.set_message( json, expandFirstRow ); }
+        void set_publish_message( std::shared_ptr<nlohmann::json> pJson, gboolean expandFirstRow = FALSE ) { publishTreeView_.set_contents( pJson, expandFirstRow ); }
+        void set_subscribe_message( std::shared_ptr<nlohmann::json> pJson, gboolean expandFirstRow = TRUE ) { subscribeTreeView_.set_contents( pJson, expandFirstRow ); }
         void set_help_message( const gchar* helpText ) const { gtk_text_buffer_set_text( pHelpBuffer_, helpText, -1 ); }
 
     private:
@@ -52,14 +54,14 @@ class Dashboard
         GtkWidget* control_panel_new(); // build right panel of pParent
         GtkWidget* console_window_new(); 
 
-        std::shared_ptr<TemplateMap> get_template_map(gchar* const topic);
-        std::shared_ptr<TemplateMap> get_current_template_map() const;
+        TemplateMap* get_template_map(gchar* const topic);
+        TemplateMap* get_current_template_map() const;
 
         static void OnMessageSampleSelectionChanged( GtkComboBox* pComboBox, Dashboard* pDashboard ); 
-        static void OnSubscribeButtonToggled( GtkToggleButton* pButton, Dashboard* pDashboard) ;
+        static void OnSubscribeButtonToggled( GtkToggleButton* pButton, Dashboard* pDashboard ) ;
         static void OnPublishButtonClicked();
-        static void OnSaveButtonClicked();
-        static void OnUpdateTourneyIdButtonClicked( GtkButton* pButton, Dashboard* pDashboard) ;
+        static void OnSaveButtonClicked( GtkButton* pButton, Dashboard* pDashboard );
+        static void OnUpdateTourneyIdButtonClicked( GtkButton* pButton, Dashboard* pDashboard ) ;
         static void OnPublishTopicSelectionChanged( GtkComboBox* pComboBox, Dashboard* pDashboard );
         static void OnSubscribeTopicSelectionChanged( GtkComboBox* pComboBox, Dashboard* pDashboard );
 };
