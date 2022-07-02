@@ -35,6 +35,7 @@ int TemplateMap::read_file( GIOChannel* channel )
     gchar* _line = NULL;
     GError* _error = NULL;
     int _rc = 0;
+    int _lineNo = 1;
 
     while ( G_IO_STATUS_EOF != g_io_channel_read_line( channel, &_line, NULL, NULL, &_error ) )
     {
@@ -44,9 +45,11 @@ int TemplateMap::read_file( GIOChannel* channel )
             break;
         }
  
-        if ( 0 > add_template_to_map( _line ) )
+        if ( 0 > add_item_to_map( _line ) )
         {
-            handle_error( "Format error in " + fileName_, _line );
+            gchar* _msg = g_strdup_printf("Format error in %s, line %d",  fileName_.c_str(), _lineNo);
+            pLogger_->Error( _msg );
+            g_free( _msg );
             _rc = -1;
             break;
         }
@@ -107,7 +110,7 @@ std::vector<std::string> TemplateMap::get_keys() const
     return _keys;
 }
 
-std::string TemplateMap::get_template( std::string const& key ) const
+std::shared_ptr<nlohmann::json> TemplateMap::get_template( std::string const& key ) const
 {
     auto it = map_.find( key );
     if ( map_.end() != it )
@@ -116,7 +119,7 @@ std::string TemplateMap::get_template( std::string const& key ) const
     }
     else
     {
-        return "";
+        return nullptr;
     }
 }
 
@@ -134,7 +137,7 @@ std::string TemplateMap::get_help( std::string const& key ) const
 }
 
 // returns -1 if there is a syntax error in 'line'
-int TemplateMap::add_template_to_map( gchar* const line )
+int TemplateMap::add_item_to_map( gchar* const line )
 {
     TemplateKey _key;
     std::string _template;
@@ -150,7 +153,16 @@ int TemplateMap::add_template_to_map( gchar* const line )
     std::getline( _sstream, _help, '|' );
     std::replace( _help.begin(), _help.end(), ';', '\n' );
 
-    map_[_key] = TemplateValue( _template, _help );   
+    try
+    {
+        map_[_key] = TemplateValue( std::make_shared<nlohmann::json>(nlohmann::json::parse( _template )), _help );  
+    }
+    catch(const std::exception& e)
+    {
+        pLogger_->Error(e.what());
+        return -1;
+    }  
+     
     return 0;
 }
 
@@ -159,17 +171,10 @@ std::string TemplateMap::get_line_from_map_item( TemplateItem const& mapItem ) c
     std::string _help { mapItem.second.second };
     std::replace( _help.begin(), _help.end(), '\n', ';' );
 
-    gchar* _line = g_strjoin( "|", mapItem.first.c_str(), mapItem.second.first.c_str(), _help.c_str(), NULL );
+    gchar* _line = g_strjoin( "|", mapItem.first.c_str(), nlohmann::to_string(*mapItem.second.first).c_str(), _help.c_str(), NULL );
     std::string _lineStr{_line};
     g_free( _line );
     return _lineStr;
-}
-
-// returns -1 to indicate an error
-int TemplateMap::handle_error( std::string const& prefix, std::string const& errorMsg ) const
-{
-    pLogger_->Error( prefix + ": " + errorMsg );
-    return -1;
 }
 
 // returns -1 if there was an error, 0 if not
@@ -177,7 +182,7 @@ int TemplateMap::handle_error( std::string const& prefix, GError* error ) const
 {
     if ( error != NULL )
     {
-        handle_error( prefix, error->message );
+        pLogger_->Error( prefix + ": " + error->message );
         g_clear_error( &error );
         return -1;
     }

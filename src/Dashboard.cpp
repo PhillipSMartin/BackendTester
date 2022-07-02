@@ -1,5 +1,12 @@
 #include "Dashboard.h"
 
+// TODO - use pointer to string for help message
+//   try again with writing file
+//   keep track of whether there are changes and enable save button accordingly
+//   implement save as
+//   try sending and receivimg msgs
+//   keep a queue of received messages and scroll through them
+
 Dashboard::Dashboard(Parameters* pParms, Logger* pLogger) :
     pParms_(pParms),
     pLogger_(pLogger),
@@ -138,18 +145,11 @@ void Dashboard::OnMessageSampleSelectionChanged( GtkComboBox* pComboBox, Dashboa
     if ( _templateMap )
     { 
         gchar* _id = gtk_combo_box_text_get_active_text( GTK_COMBO_BOX_TEXT( pComboBox ) ); 
-        gchar* _msg;    
-        pDashboard->pLogger_->Debug( _msg = g_strdup_printf( "Template changed to %s", _id ) );
+        gchar* _msg = g_strdup_printf( "Template changed to %s", _id );    
+        pDashboard->pLogger_->Debug( _msg  );
         pDashboard->set_help_message( _templateMap->get_help ( _id ).c_str() );
-        try
-        {
-            pDashboard->set_publish_message( std::make_shared<nlohmann::json>(nlohmann::json::parse( _templateMap->get_template ( _id ) )) );
-        }
-        catch(const std::exception& e)
-        {
-           pDashboard->pLogger_->Debug( _msg = g_strdup_printf( "Unable to parse json string: %s", _templateMap->get_template ( _id ).c_str() ) );
-        }
-        
+        pDashboard->set_publish_message(  _templateMap->get_template( _id ) );
+         
         g_free( _id );
         g_free( _msg );
     }
