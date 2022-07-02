@@ -1,7 +1,6 @@
-#include "JsonTreeView.h"
-
 #include <gtk/gtk.h>
-#include <sstream>
+
+#include "JsonTreeView.h"
 
 JsonTreeView::JsonTreeView(Logger* pLogger) : 
     pParent_(gtk_scrolled_window_new( NULL, NULL )),
@@ -30,11 +29,11 @@ JsonTreeView::JsonTreeView(Logger* pLogger) :
     g_signal_connect( G_OBJECT( _renderer ), "edited", G_CALLBACK( OnCellEdited ), gpointer(this) );
 }
 
-void JsonTreeView::set_message( nlohmann::json const& json, gboolean expandFirstRow ) 
+void JsonTreeView::set_contents( std::shared_ptr<nlohmann::json> pJson, gboolean expandFirstRow ) 
 { 
-    json_  = json; 
+    pJson_ = pJson; 
     gtk_tree_store_clear( pTreeStore_ );
-    fill_data(&json_); 
+    fill_data( pJson.get() ); 
 
     if ( expandFirstRow )
     {
@@ -64,25 +63,23 @@ void JsonTreeView::fill_data( nlohmann::json* const pBranch, GtkTreeIter* const 
         }
         else
         {
-            std::ostringstream _os;
-            _os << _it.value();
-            gtk_tree_store_set( pTreeStore_, &_iter, KEY, _it.key().c_str(), VALUE, _os.str().c_str(), KEY_PATH, _newKeyPath, EDITABLE, TRUE, -1 );
+            gtk_tree_store_set( pTreeStore_, &_iter, KEY, _it.key().c_str(), VALUE, nlohmann::to_string( _it.value()) .c_str(), KEY_PATH, _newKeyPath, EDITABLE, TRUE, -1 );
         }
     }
 }
 
-void JsonTreeView::OnCellEdited( GtkCellRendererText* renderer, gchar* path, gchar* newText, JsonTreeView* model )
+void JsonTreeView::OnCellEdited( GtkCellRendererText* renderer, gchar* path, gchar* newText, JsonTreeView* treeView )
 {
     GtkTreeIter _iter;
  
-    if ( gtk_tree_model_get_iter_from_string( GTK_TREE_MODEL( model->pTreeStore_ ), &_iter, path ) )
+    if ( gtk_tree_model_get_iter_from_string( GTK_TREE_MODEL( treeView->pTreeStore_ ), &_iter, path ) )
     {
         gchar* _typeName;
         gchar* _keyPath;
         gchar* _errorMsg;
-        gtk_tree_model_get( GTK_TREE_MODEL(model->pTreeStore_), &_iter, KEY_PATH, &_keyPath, -1) ;
+        gtk_tree_model_get( GTK_TREE_MODEL(treeView->pTreeStore_), &_iter, KEY_PATH, &_keyPath, -1) ;
         
-        nlohmann::json* _pJson = get_json_branch( model->get_pJson(), _keyPath );
+        nlohmann::json* _pJson = get_json_branch( treeView->pJson_.get(), _keyPath );
         switch (_pJson->type())
         {
             case nlohmann::json::value_t::number_integer:
@@ -104,15 +101,13 @@ void JsonTreeView::OnCellEdited( GtkCellRendererText* renderer, gchar* path, gch
                 break;
             default: 
                 _errorMsg = g_strdup_printf( "Unhandled type \"%s\" for json item \"%s\"", _pJson->type_name(), _keyPath );           
-                model->pLogger_->Error( _errorMsg );
+                treeView->pLogger_->Error( _errorMsg );
                 g_free( _errorMsg );
                 return;
         }
 
-        std::ostringstream _os;
-        _os << *_pJson;
-        gtk_tree_store_set( model->pTreeStore_, &_iter, VALUE, _os.str().c_str(), -1 );
-        model->pLogger_->Debug( nlohmann::to_string( *model->get_pJson() ) );     
+        gtk_tree_store_set( treeView->pTreeStore_, &_iter, VALUE, nlohmann::to_string( *_pJson).c_str(), -1 );
+        treeView->pLogger_->Debug( "Publish message changed to: " + treeView->get_json_string() );     
     }
 }
 
