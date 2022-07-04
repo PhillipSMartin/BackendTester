@@ -10,6 +10,7 @@ add_executable(BackendTester
     src/Dashboard.cpp
     src/JsonFormatter.cpp
     src/JsonTest.cpp 
+    src/JsonTreeStore.cpp
     src/JsonTreeView.cpp
     src/Logger.cpp 
     src/Parameters.cpp 
