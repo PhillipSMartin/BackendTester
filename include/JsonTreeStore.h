@@ -1,6 +1,34 @@
 #pragma once
 
 #include <gtk/gtk.h>
+#include "Logger.h"
+
+// JsonTreeStore
+//
+//      a hierarchical model for storing an nlohmann::json object
+//      can be viewed by a GtkTreeView or a JsonTreeView wdiget
+//
+//  Public methods:
+//      JsonTreeStore* json_tree_store_new( Logger* pLogger )
+//          creates a new, empty, JsonTreeStore
+//
+//      gchar* text json_tree_store_get_json_string( JsonTreeStore* jsonTreeStore )
+//          returns the cstring representation of the internal json object
+//          caller takes ownership of the cstring and must free it via g_free
+//
+//      void json_tree_store_set_json_string( JsonTreeStore* jsonTreeStore, gchar* text )
+//          uses the passed cstring to set the internal json object
+//          the caller retains ownership of the passed cstring
+//
+//      void json_tree_store_edit_json_string( JsonTreeStore* jsonTreeStore,
+//              gchar* path, gchar* newText )
+//          modifies the text located at the specified path
+//
+//  Signals:
+//      json-edited
+//          json object was changed via an edit operation
+//      json-replaced
+//          json object was replaced via a call to json_tree_store_set_json_string
 
 G_BEGIN_DECLS
 
@@ -26,10 +54,21 @@ struct _JsonTreeStoreClass
     void (* json_replaced) ( JsonTreeStore* jsonTreeStore );
 };
 
+// tree model columns
+enum JsonTreeModelColumns
+{
+    KEY = 0,
+    VALUE,
+    KEY_PATH,
+    EDITABLE,
+    NUM_COLUMNS
+};
+
 GType json_tree_store_get_type( void ) G_GNUC_CONST;
-GtkWidget*  json_tree_store_new( void );
+JsonTreeStore*  json_tree_store_new( Logger* logger );
 
 gchar* json_tree_store_get_json_string( JsonTreeStore* jsonTreeStore );
 void json_tree_store_set_json_string( JsonTreeStore* jsonTreeStore , const gchar* text );
+void json_tree_store_edit_json_string( JsonTreeStore* jsonTreeStore, const gchar* path, const gchar* newText );
 
 G_END_DECLS

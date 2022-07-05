@@ -3,7 +3,6 @@
 #include <string>
 #include <vector>
 
-#include "JsonTreeView.h"
 #include "Logger.h"
 
 class TemplateChooser

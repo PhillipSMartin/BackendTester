@@ -12,9 +12,9 @@ Dashboard::Dashboard(Parameters* pParms, Logger* pLogger) :
     pLogger_(pLogger),
     pParent_(gtk_paned_new( GTK_ORIENTATION_VERTICAL )),
     subscribeTopicChooser_(pParms, pLogger, TopicChooser::STATE_TB),
-    subscribeTreeView_(pLogger),
+    subscribeViewer_(json_viewer_new( pLogger, TRUE )),
     publishTopicChooser_(pParms, pLogger, TopicChooser::EVENT_TB),
-    publishTreeView_(pLogger),
+    publishViewer_(json_viewer_new( pLogger, FALSE )),
     pTourneyIdEntry_(gtk_entry_new()),
     templateChooser_(pLogger)
 {
@@ -75,7 +75,7 @@ GtkWidget* Dashboard::subscribe_panel_new()
     gtk_box_pack_start( GTK_BOX( _pSubscribePanel ), _pSubscribeButton, FALSE, TRUE, 0 );
 
     gtk_box_pack_start( GTK_BOX( _pSubscribePanel ), subscribeTopicChooser_.get_parent(), FALSE, TRUE, 0 );
-    gtk_box_pack_start( GTK_BOX( _pSubscribePanel ), subscribeTreeView_.get_parent(), TRUE, TRUE, 0 );
+    gtk_box_pack_start( GTK_BOX( _pSubscribePanel ), subscribeViewer_, TRUE, TRUE, 0 );
 
     g_signal_connect( G_OBJECT( subscribeTopicChooser_.get_combo_box()), "changed", G_CALLBACK( OnSubscribeTopicSelectionChanged ), gpointer(this) );
     return _pSubscribePanel;
@@ -91,7 +91,7 @@ GtkWidget* Dashboard::publish_panel_new()
     gtk_box_pack_start( GTK_BOX( _pPublishPanel ), _pPublishButton, FALSE, TRUE, 0 );
 
     gtk_box_pack_start( GTK_BOX( _pPublishPanel ), publishTopicChooser_.get_parent(), FALSE, TRUE, 0 );
-    gtk_box_pack_start( GTK_BOX( _pPublishPanel ), publishTreeView_.get_parent(), TRUE, TRUE, 0 );
+    gtk_box_pack_start( GTK_BOX( _pPublishPanel ), publishViewer_, TRUE, TRUE, 0 );
 
     g_signal_connect( G_OBJECT( publishTopicChooser_.get_combo_box() ), "changed", G_CALLBACK( OnPublishTopicSelectionChanged ), gpointer(this) );
     return _pPublishPanel;

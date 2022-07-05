@@ -4,7 +4,7 @@
 #include <map>
 #include <set>
 
-#include "JsonTreeView.h"
+#include "JsonViewer.h"
 #include "Logger.h"
 #include "TemplateChooser.h"
 #include "Parameters.h"
@@ -21,11 +21,11 @@ class Dashboard
 
         // leftmost panel for subscriptions
         TopicChooser subscribeTopicChooser_; 
-        JsonTreeView subscribeTreeView_; 
+        GtkWidget* subscribeViewer_; 
 
         // middle panel for publishing
         TopicChooser publishTopicChooser_; 
-        JsonTreeView publishTreeView_; 
+        GtkWidget* publishViewer_; 
 
         // rightmost panel for controls
         GtkWidget* pTourneyIdEntry_; // an entry box for setting tourney id
@@ -44,8 +44,10 @@ class Dashboard
         
         GtkWidget* const get_parent() const { return pParent_; }
 
-        void set_publish_message( std::shared_ptr<nlohmann::json> pJson, gboolean expandFirstRow = FALSE ) { publishTreeView_.set_contents( pJson, expandFirstRow ); }
-        void set_subscribe_message( std::shared_ptr<nlohmann::json> pJson, gboolean expandFirstRow = TRUE ) { subscribeTreeView_.set_contents( pJson, expandFirstRow ); }
+        void set_publish_message( std::shared_ptr<nlohmann::json> pJson, gboolean expandFirstRow = FALSE ) 
+            { json_viewer_set_json_string( JSON_VIEWER( publishViewer_ ), -1, nlohmann::to_string( *pJson ).c_str() ); }
+        void set_subscribe_message( std::shared_ptr<nlohmann::json> pJson, gboolean expandFirstRow = TRUE ) 
+            { json_viewer_set_json_string( JSON_VIEWER( subscribeViewer_ ), -1, nlohmann::to_string( *pJson ).c_str() ); }
         void set_help_message( const gchar* helpText ) const { gtk_text_buffer_set_text( pHelpBuffer_, helpText, -1 ); }
 
     private:
