@@ -128,10 +128,8 @@ static nlohmann::json* json_tree_store_parse_json_string( const gchar* text, Log
         }
         catch(const std::exception& e)
         {
-            gchar* msg = g_strdup_printf( "Error parsing string %s", text );
-            pLogger->Info(" msg ");
-            pLogger->Error( e.what() );
-            g_free( msg );
+            pLogger->Info( g_strdup_printf( "Error parsing string %s", text ) );
+            pLogger->ErrorStr( e.what() );
         }
     } 
 
@@ -230,15 +228,13 @@ void json_tree_store_edit_json_string( JsonTreeStore* jsonTreeStore, const gchar
             case nlohmann::json::value_t::boolean:
                 *_pJson = g_str_has_prefix( newText, "t" ) || g_str_has_prefix( newText, "T" );
                 break;
-            default: 
-                _errorMsg = g_strdup_printf( "Unhandled type \"%s\" for json item \"%s\"", _pJson->type_name(), _keyPath );           
-                _priv->pLogger_->Error( _errorMsg );
-                g_free( _errorMsg );
+            default:           
+                _priv->pLogger_->Error( g_strdup_printf( "Unhandled type \"%s\" for json item \"%s\"", _pJson->type_name(), _keyPath ) );
                 return;
         }
 
         gtk_tree_store_set( GTK_TREE_STORE( jsonTreeStore ), &_iter, VALUE, nlohmann::to_string( *_pJson).c_str(), -1 );
-        _priv->pLogger_->Debug( "Publish message changed to: " + nlohmann::to_string( *_priv->pJson_ ) );  
+        _priv->pLogger_->Debug( g_strdup_printf( "Publish message changed to: %s", nlohmann::to_string( *_priv->pJson_ ).c_str() ) );  
 
         g_signal_emit_by_name( (gpointer)jsonTreeStore, "json-edited" );   
     }

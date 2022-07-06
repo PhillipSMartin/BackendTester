@@ -27,7 +27,7 @@ class Parameters
         void set_tourney_id( const gchar* tourneyId ) { g_free( tourneyId_ ); tourneyId_ = g_strdup( tourneyId ); }
 
         const gchar* get_working_directory() const { return workingDirectory_; }
-        void set_working_directory( const gchar* workingDirectory ) { g_free( workingDirectory_ ); workingDirectory_ = g_strdup( workingDirectory_ ); }
+        void set_working_directory( const gchar* workingDirectory ) { g_free( workingDirectory_ ); workingDirectory_ = g_strdup( workingDirectory ); }
    
         // returns FALSE if unable to parse command-line arguments
         // valid arguments are
@@ -41,8 +41,8 @@ class Parameters
 
 
         // converts string to LogLevel enum and back
-        static LogLevel str_to_log_level( std::string const& logLevelStr );
-        static std::string log_level_to_str( LogLevel const logLevel );
+        static LogLevel str_to_log_level( const gchar* logLevelStr );
+        static const gchar* log_level_to_str( LogLevel const logLevel );
 
     private:
         void print_help() const;

@@ -12,7 +12,7 @@ namespace JsonFormatter
         }
         catch(const std::exception& e)
         {
-            pLogger->Error( "Unable to parse json string " + json_text );
+            pLogger->Error( g_strdup_printf( "Unable to parse json string: ", json_text .c_str() ) );
             return "";
         }       
      }
@@ -27,9 +27,7 @@ namespace JsonFormatter
         }
         catch(const std::exception& e)
         {
-            gchar* _msg = g_strdup_printf( "Unable to print json object: %s", e.what() );
-            pLogger->Error( _msg );
-            g_free( _msg );
+            pLogger->Error( g_strdup_printf( "Unable to print json object: %s", e.what() ) );
             return "";
         }       
      }

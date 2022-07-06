@@ -47,9 +47,7 @@ int TemplateMap::read_file( GIOChannel* channel )
  
         if ( 0 > add_item_to_map( _line ) )
         {
-            gchar* _msg = g_strdup_printf("Format error in %s, line %d",  fileName_.c_str(), _lineNo);
-            pLogger_->Error( _msg );
-            g_free( _msg );
+            pLogger_->Error( g_strdup_printf("Format error in %s, line %d",  fileName_.c_str(), _lineNo) );
             _rc = -1;
             break;
         }
@@ -159,7 +157,7 @@ int TemplateMap::add_item_to_map( gchar* const line )
     }
     catch(const std::exception& e)
     {
-        pLogger_->Error(e.what());
+        pLogger_->ErrorStr(e.what());
         return -1;
     }  
      
@@ -182,7 +180,7 @@ int TemplateMap::handle_error( std::string const& prefix, GError* error ) const
 {
     if ( error != NULL )
     {
-        pLogger_->Error( prefix + ": " + error->message );
+        pLogger_->Error( g_strdup_printf( "%s: %s", prefix.c_str(), error->message ) );
         g_clear_error( &error );
         return -1;
     }

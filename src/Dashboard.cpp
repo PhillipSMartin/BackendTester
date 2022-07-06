@@ -41,6 +41,7 @@ Dashboard::Dashboard(Parameters* pParms, Logger* pLogger) :
 
     // populate template combo box
     g_signal_emit_by_name( G_OBJECT( publishTopicChooser_.get_combo_box() ), "changed" );
+
 }
 
 Dashboard::~Dashboard()
@@ -149,12 +150,9 @@ void Dashboard::OnTemplateChooserChanged( GtkComboBox* pComboBox, Dashboard* pDa
 
     if ( _id >= 0 )
     { 
-        gchar* _msg = g_strdup_printf( "Template changed to %s", _templateName );    
-        pDashboard->pLogger_->Debug( _msg  );
+        pDashboard->pLogger_->Debug( g_strdup_printf( "Template changed to %s", _templateName ) );
         pDashboard->set_publish_message( _template, _id );
         pDashboard->set_help_message( _helpText, _id );
-        
-        g_free( _msg );
     }
     else
     {
@@ -169,10 +167,8 @@ void Dashboard::OnTemplateChooserChanged( GtkComboBox* pComboBox, Dashboard* pDa
 
 void Dashboard::OnUpdateTourneyIdButtonClicked( GtkButton* pButton, Dashboard* pDashboard )
 {
-    pDashboard->pParms_->set_tourney_id( gtk_entry_get_text( GTK_ENTRY( pDashboard->pTourneyIdEntry_ ) ) );
-    gchar* _msg = g_strdup_printf( "Tourney id changed to %s", gtk_entry_get_text( GTK_ENTRY( pDashboard->pTourneyIdEntry_ ) ) );
-    pDashboard->pLogger_->Info( _msg );
-    g_free( _msg );
+    pDashboard->pParms_->set_tourney_id( gtk_entry_get_text( GTK_ENTRY( pDashboard->pTourneyIdEntry_ ) ) );;
+    pDashboard->pLogger_->Info( g_strdup_printf( "Tourney id changed to %s", gtk_entry_get_text( GTK_ENTRY( pDashboard->pTourneyIdEntry_ ) ) ) );
 }
 
 void Dashboard::OnSubscribeButtonToggled( GtkToggleButton* pButton, Dashboard* pDashboard )
@@ -185,7 +181,7 @@ void Dashboard::OnSubscribeButtonToggled( GtkToggleButton* pButton, Dashboard* p
             // TODO subscribe
             std::string _topic = pDashboard->subscribeTopicChooser_.get_topic();
             pDashboard->subscribedTopics_.insert( _topic );
-            pDashboard->pLogger_->Info( "Subscribed to " + _topic );
+            pDashboard->pLogger_->Info( g_strdup_printf( "Subscribed to ", _topic.c_str() ) );
         }
     }
     else
@@ -196,7 +192,7 @@ void Dashboard::OnSubscribeButtonToggled( GtkToggleButton* pButton, Dashboard* p
            // TODO subscribe
             std::string _topic = pDashboard->subscribeTopicChooser_.get_topic();
             pDashboard->subscribedTopics_.erase( _topic );
-            pDashboard->pLogger_->Info( "Unsubscribed from " + _topic );
+            pDashboard->pLogger_->Info( g_strdup_printf( "Unsubscribed from ", _topic.c_str() ));
         }
    }
 }

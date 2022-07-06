@@ -20,7 +20,7 @@ int main( int argc, char** argv )
 
     // start Logger
     Logger _logger(&_parms);
-     _logger.Info( "Backend Tester started" );
+     _logger.InfoStr( "Backend Tester started" );
  
     // create json object from test string
     auto _json = std::make_shared<nlohmann::json>( nlohmann::json::parse( _json_string ) );
@@ -39,7 +39,7 @@ int main( int argc, char** argv )
     gtk_widget_show_all( _pWindow );  
     gtk_main();
 
-    _logger.Info( "Backend Tester exited" );
+    _logger.InfoStr( "Backend Tester exited" );
     return 0;
 }
 

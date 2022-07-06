@@ -10,7 +10,7 @@ struct _TemplateChooserPrivate
     Logger* pLogger_;
     TemplateListStore* pListStore_;
     gchar* topic_ = NULL;
-    std::string workingDirectory_;
+    gchar* workingDirectory_;
 };
 
 // signals emitted
@@ -130,26 +130,29 @@ static void template_chooser_set_topic( TemplateChooser* templateChooser, const 
     _priv->topic_ = g_strdup( topic );
  
     gchar* _templateBaseFileName = TEMPLATE_FILE_NAME( topic );
-    gchar* _templateFileName = g_build_filename( _priv->workingDirectory_.c_str(), _templateBaseFileName, NULL );
+    gchar* _templateFileName = g_build_filename( _priv->workingDirectory_, _templateBaseFileName, NULL );
     gint _templatesImported = template_list_store_import_file(_priv->pListStore_, _templateFileName );
 
-    gchar* msg = ( _templatesImported >= 0 ) ?
-        g_strdup_printf( "Publish topic changed to %s", topic ) :
-        g_strdup_printf( "No template file found for topic %s", topic );
-    _priv->pLogger_->Info( msg );   
+    if ( _templatesImported >= 0 )
+    {
+        _priv->pLogger_->Info( g_strdup_printf( "Publish topic changed to %s", topic ) );
+    }
+    else
+    {
+        _priv->pLogger_->Info( g_strdup_printf( "No template file found for topic %s", topic ) );
+    } 
 
     g_free( _templateBaseFileName );
     g_free( _templateFileName );
-    g_free( msg );
 }
 
 // Public functions
-GtkWidget* template_chooser_new( Logger* pLogger, std::string workingDirectory )
+GtkWidget* template_chooser_new( Logger* pLogger, const gchar* workingDirectory )
 {
     GtkWidget* _pComboBox = GTK_WIDGET( g_object_new( template_chooser_get_type(), NULL ) );
     TemplateChooserPrivate* _priv = TEMPLATE_CHOOSER_GET_PRIVATE( _pComboBox );
     _priv->pLogger_ = pLogger;
-    _priv->workingDirectory_ = workingDirectory;
+    _priv->workingDirectory_ = g_strdup( workingDirectory );
 
     // add model- must be done here because we did not have pLogger during template_chooser_init
 

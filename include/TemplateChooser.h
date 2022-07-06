@@ -41,7 +41,7 @@ struct _TemplateChooserClass
 };
 
 GType template_chooser_get_type( void ) G_GNUC_CONST;
-GtkWidget* template_chooser_new( Logger* logger, std::string workingDirectory );
+GtkWidget* template_chooser_new( Logger* logger, const char* workingDirectory );
 
 // retrieves fields from active selection
 // caller assumes ownership of the cstrings and must free them

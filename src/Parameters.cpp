@@ -11,19 +11,19 @@ Parameters::~Parameters()
     g_free( workingDirectory_ );
 }
 
-Parameters::LogLevel Parameters::str_to_log_level( std::string const& logLevelStr )
+Parameters::LogLevel Parameters::str_to_log_level( const gchar* logLevelStr )
 {
-    if ( logLevelStr == "DEBUG" ) { return LogLevel::DEBUG; }
-    if ( logLevelStr == "INFO" ) { return LogLevel::INFO; }
-    if ( logLevelStr == "WARN" ) { return LogLevel::WARN; }
-    if ( logLevelStr == "ERROR" ) { return LogLevel::ERROR; }
-    if ( logLevelStr == "FATAL" ) { return LogLevel::FATAL; }
-    if ( logLevelStr == "NONE" ) { return LogLevel::NONE; }
+    if ( 0 == g_strcmp0( logLevelStr, "DEBUG" ) ) { return LogLevel::DEBUG; }
+    if ( 0 == g_strcmp0( logLevelStr, "INFO" ) ) { return LogLevel::INFO; }
+    if ( 0 == g_strcmp0( logLevelStr, "WARN" ) ) { return LogLevel::WARN; }
+    if ( 0 == g_strcmp0( logLevelStr, "ERROR" ) ) { return LogLevel::ERROR; }
+    if ( 0 == g_strcmp0( logLevelStr, "FATAL" ) ) { return LogLevel::FATAL; }
+    if ( 0 == g_strcmp0( logLevelStr, "NONE" ) ) { return LogLevel::NONE; }
 
     return LogLevel::UNKNOWN;
 } 
 
-std::string Parameters::log_level_to_str( Parameters::LogLevel const logLevel )
+const gchar* Parameters::log_level_to_str( Parameters::LogLevel const logLevel )
 {
     switch (logLevel)
     {
@@ -66,14 +66,14 @@ gboolean Parameters::parse_arguments( int const argc, char** const& argv )
        switch (_opt)
         {
             case 'l': 
-                fileLogLevel_ = str_to_log_level( _optargstring );
+                fileLogLevel_ = str_to_log_level( _optargstring.c_str() );
                 if ( fileLogLevel_ == LogLevel::UNKNOWN )
                 {
                     _rc = FALSE;
                 }
                 break;
             case 'c': 
-                consoleLogLevel_ = str_to_log_level( _optargstring );
+                consoleLogLevel_ = str_to_log_level( _optargstring.c_str() );
                 if ( consoleLogLevel_ == LogLevel::UNKNOWN )
                 {
                    _rc = FALSE;

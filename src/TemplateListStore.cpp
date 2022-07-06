@@ -78,7 +78,7 @@ static int template_list_store_handle_error( Logger* pLogger, std::string const&
 {
     if ( error != NULL )
     {
-        pLogger->Error( prefix + ": " + error->message );
+        pLogger->Error( g_strdup_printf( "%s: %s", prefix.c_str(), error->message ) );
         g_clear_error( &error );
         return -1;
     }
@@ -107,9 +107,7 @@ static int template_list_store_read_file( TemplateListStore* templateListStore, 
  
         if ( 0 > template_list_store_add_item( templateListStore, _line ) )
         {
-            gchar* _errorMsg = g_strdup_printf("Format error in %s, line %d",  _priv->fileName_, _lineNo);
-            _priv->pLogger_->Error( _errorMsg );
-             g_free( _errorMsg );
+            _priv->pLogger_->Error( g_strdup_printf("Format error in %s, line %d",  _priv->fileName_, _lineNo) );
             _lineNo = -1;
             break;
         }
