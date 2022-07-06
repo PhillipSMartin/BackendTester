@@ -15,6 +15,7 @@ add_executable(BackendTester
     src/Logger.cpp 
     src/Parameters.cpp 
     src/TemplateChooser.cpp
+    src/TemplateListStore.cpp
     src/TemplateMap.cpp
     src/TopicChooser.cpp)
 

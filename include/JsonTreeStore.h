@@ -55,7 +55,7 @@ struct _JsonTreeStoreClass
 };
 
 // tree model columns
-enum JsonTreeModelColumns
+enum 
 {
     KEY = 0,
     VALUE,

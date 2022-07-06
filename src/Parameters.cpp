@@ -31,6 +31,16 @@ std::string Parameters::LogLevelToStr( Parameters::LogLevel const logLevel )
    }
 }
 
+std::string Parameters::determine_working_directory( const char* programName )
+{
+    gchar* _executablePath = g_find_program_in_path( programName );
+    gchar* _workingDirectory = g_path_get_dirname( _executablePath );
+    std::string _workingDirectoryString{ _workingDirectory };
+    g_free( _executablePath );
+    g_free( _workingDirectory );
+    return _workingDirectoryString;
+}
+
 // returns FALSE if unable to parse command-line arguments
 // valid arguments are
 //      -t<id>          tourney id
@@ -40,6 +50,8 @@ std::string Parameters::LogLevelToStr( Parameters::LogLevel const logLevel )
 //      DEBUG, INFO, WARN, ERROR, FATAL
 gboolean Parameters::ParseArguments( int const argc, char** const& argv )
 {
+    workingDirectory_ = determine_working_directory( argv[0] );
+ 
     int _opt;
     gboolean _rc = TRUE;
     while ( -1 != (_opt = getopt( argc, argv, ":l:c:t:" )) )

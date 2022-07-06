@@ -16,7 +16,7 @@ Dashboard::Dashboard(Parameters* pParms, Logger* pLogger) :
     publishTopicChooser_(pParms, pLogger, TopicChooser::EVENT_TB),
     publishViewer_(json_viewer_new( pLogger, FALSE )),
     pTourneyIdEntry_(gtk_entry_new()),
-    templateChooser_(pLogger)
+    templateChooser_(template_chooser_new( pLogger, pParms->get_working_directory() ))
 {
     gtk_widget_set_size_request( pParent_, 1200, 800 );  
 
@@ -93,7 +93,7 @@ GtkWidget* Dashboard::publish_panel_new()
     gtk_box_pack_start( GTK_BOX( _pPublishPanel ), publishTopicChooser_.get_parent(), FALSE, TRUE, 0 );
     gtk_box_pack_start( GTK_BOX( _pPublishPanel ), publishViewer_, TRUE, TRUE, 0 );
 
-    g_signal_connect( G_OBJECT( publishTopicChooser_.get_combo_box() ), "changed", G_CALLBACK( OnPublishTopicSelectionChanged ), gpointer(this) );
+    g_signal_connect( G_OBJECT( publishTopicChooser_.get_combo_box() ), "changed", G_CALLBACK( OnPublishTopicChanged ), gpointer(this) );
     return _pPublishPanel;
 }
 
@@ -116,8 +116,8 @@ GtkWidget* Dashboard::control_panel_new()
     // add TemplateChooser with label
     GtkWidget* _pBoxTemplateChooser = gtk_box_new( GTK_ORIENTATION_HORIZONTAL, 10 );
     gtk_box_pack_start( GTK_BOX( _pBoxTemplateChooser ), gtk_label_new( "Template: " ), FALSE, FALSE, 0 );
-    g_signal_connect( G_OBJECT( templateChooser_.get_combo_box() ), "changed", G_CALLBACK( OnMessageSampleSelectionChanged ), gpointer(this) );  
-    gtk_box_pack_start( GTK_BOX( _pBoxTemplateChooser) , templateChooser_.get_combo_box(), TRUE, TRUE, 0 );
+    g_signal_connect( G_OBJECT( templateChooser_ ), "changed", G_CALLBACK( OnTemplateChooserChanged ), gpointer(this) );  
+    gtk_box_pack_start( GTK_BOX( _pBoxTemplateChooser) , templateChooser_, TRUE, TRUE, 0 );
     gtk_box_pack_start( GTK_BOX( _pControlPanel ), _pBoxTemplateChooser, FALSE, TRUE, 0 );
 
     // add buttons
@@ -139,20 +139,32 @@ GtkWidget* Dashboard::control_panel_new()
     return _pControlPanel;
 }
 
-void Dashboard::OnMessageSampleSelectionChanged( GtkComboBox* pComboBox, Dashboard* pDashboard )
+void Dashboard::OnTemplateChooserChanged( GtkComboBox* pComboBox, Dashboard* pDashboard )
 {
-    auto _templateMap = pDashboard->get_current_template_map();
-    if ( _templateMap )
+ 
+    int _id = -1;
+    gchar* _templateName = template_chooser_get_template_name( TEMPLATE_CHOOSER( pComboBox ) );
+    gchar* _template = template_chooser_get_template( TEMPLATE_CHOOSER( pComboBox ), &_id );
+    gchar* _helpText = template_chooser_get_help_text( TEMPLATE_CHOOSER( pComboBox ), NULL );
+
+    if ( _id >= 0 )
     { 
-        gchar* _id = gtk_combo_box_text_get_active_text( GTK_COMBO_BOX_TEXT( pComboBox ) ); 
-        gchar* _msg = g_strdup_printf( "Template changed to %s", _id );    
+        gchar* _msg = g_strdup_printf( "Template changed to %s", _templateName );    
         pDashboard->pLogger_->Debug( _msg  );
-        pDashboard->set_help_message( _templateMap->get_help ( _id ).c_str() );
-        pDashboard->set_publish_message(  _templateMap->get_template( _id ) );
-         
-        g_free( _id );
+        pDashboard->set_publish_message( _template, _id );
+        pDashboard->set_help_message( _helpText, _id );
+        
         g_free( _msg );
     }
+    else
+    {
+        pDashboard->set_publish_message( _template, _id );
+        pDashboard->set_help_message( _helpText, _id );       
+    }
+
+    g_free( _templateName );
+    g_free( _template );
+    g_free( _helpText );
 }
 
 void Dashboard::OnUpdateTourneyIdButtonClicked( GtkButton* pButton, Dashboard* pDashboard )
@@ -229,22 +241,11 @@ TemplateMap* Dashboard::get_current_template_map() const
     return _map;
 }
 
-void Dashboard::OnPublishTopicSelectionChanged( GtkComboBox* pComboBox, Dashboard* pDashboard )
+void Dashboard::OnPublishTopicChanged( GtkComboBox* pComboBox, Dashboard* pDashboard )
 {
     gchar* _topic = gtk_combo_box_text_get_active_text( GTK_COMBO_BOX_TEXT( pComboBox ) );
-    auto _map = pDashboard->get_template_map( _topic );
+    g_object_set( G_OBJECT( pDashboard->templateChooser_), "topic", _topic, NULL );
     g_free( _topic );
-
-    if ( _map )
-    {
-        pDashboard->templateChooser_.add_messages( _map->get_keys() ) ;
-        pDashboard->pLogger_->Info( "Now publishing to topic " + pDashboard->publishTopicChooser_.get_topic() );
-    }
-    else
-    {
-        pDashboard->templateChooser_.clear_messages();
-        pDashboard->pLogger_->Info( "Unable to publish to topic " + pDashboard->publishTopicChooser_.get_topic() + " - no template file" );
-    }
 }
 
 void Dashboard::OnSaveButtonClicked( GtkButton* pButton, Dashboard* pDashboard )
@@ -255,6 +256,7 @@ void Dashboard::OnSaveButtonClicked( GtkButton* pButton, Dashboard* pDashboard )
         _templateMap->export_file();
     }   
 }
+
 void Dashboard::OnSubscribeTopicSelectionChanged( GtkComboBox* pComboBox, Dashboard* pDashboard )
 {
 

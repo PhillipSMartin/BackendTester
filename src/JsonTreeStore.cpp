@@ -120,18 +120,22 @@ static void json_tree_store_fill_data(JsonTreeStore* jsonTreeStore, nlohmann::js
 
 static nlohmann::json* json_tree_store_parse_json_string( const gchar* text, Logger* pLogger )
 {
-    try
+    if ( text != nullptr )
     {
-        return new nlohmann::json(nlohmann::json::parse( text ));
-    }
-    catch(const std::exception& e)
-    {
-        gchar* msg = g_strdup_printf( "Error parsing string %s", text );
-        pLogger->Info(" msg ");
-        pLogger->Error( e.what() );
-        g_free( msg );
-        return nullptr;
-     }   
+        try
+        {
+            return new nlohmann::json(nlohmann::json::parse( text ));
+        }
+        catch(const std::exception& e)
+        {
+            gchar* msg = g_strdup_printf( "Error parsing string %s", text );
+            pLogger->Info(" msg ");
+            pLogger->Error( e.what() );
+            g_free( msg );
+        }
+    } 
+
+    return nullptr; 
 }
 
 static nlohmann::json* const json_tree_store_get_branch( nlohmann::json* pJson, const gchar* keyPath )

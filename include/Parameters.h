@@ -12,6 +12,7 @@ class Parameters
         LogLevel fileLogLevel_ = LogLevel::INFO;
         LogLevel consoleLogLevel_ = LogLevel::INFO;
         std::string tourneyId_;
+        std::string workingDirectory_;
 
     public:
         LogLevel get_file_log_level() const { return fileLogLevel_; }
@@ -22,6 +23,8 @@ class Parameters
 
         std::string get_tourney_id() const { return tourneyId_; }
         void set_tourney_id( std::string const& tourneyId ) { tourneyId_ = tourneyId; }
+
+        std::string get_working_directory() const { return workingDirectory_; }
         
         // returns FALSE if unable to parse command-line arguments
         // valid arguments are
@@ -31,6 +34,7 @@ class Parameters
         // valid LogLevels are
         //      DEBUG, INFO, WARN, ERROR, FATAL
         gboolean ParseArguments( int const argc, char** const& argv );
+        std::string determine_working_directory( const char* programName );
 
         // converts string to LogLevel enum and back
         static LogLevel StrToLogLevel( std::string const& logLevelStr );

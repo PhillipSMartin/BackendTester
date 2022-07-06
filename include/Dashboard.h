@@ -29,7 +29,7 @@ class Dashboard
 
         // rightmost panel for controls
         GtkWidget* pTourneyIdEntry_; // an entry box for setting tourney id
-        TemplateChooser templateChooser_; // a combo box for choosing a message template
+        GtkWidget* templateChooser_; // a combo box for choosing a message template
         GtkTextBuffer* pHelpBuffer_; // a text buffer for displaying help about the current message
         GtkTextBuffer* pConsoleBuffer_; // a text buffer for displaying log messages
 
@@ -44,11 +44,17 @@ class Dashboard
         
         GtkWidget* const get_parent() const { return pParent_; }
 
-        void set_publish_message( std::shared_ptr<nlohmann::json> pJson, gboolean expandFirstRow = FALSE ) 
-            { json_viewer_set_json_string( JSON_VIEWER( publishViewer_ ), -1, nlohmann::to_string( *pJson ).c_str() ); }
+        void set_publish_message( const gchar* text, int id ) 
+            { json_viewer_set_json_string( JSON_VIEWER( publishViewer_ ), id, text ); }
         void set_subscribe_message( std::shared_ptr<nlohmann::json> pJson, gboolean expandFirstRow = TRUE ) 
-            { json_viewer_set_json_string( JSON_VIEWER( subscribeViewer_ ), -1, nlohmann::to_string( *pJson ).c_str() ); }
-        void set_help_message( const gchar* helpText ) const { gtk_text_buffer_set_text( pHelpBuffer_, helpText, -1 ); }
+            { json_viewer_set_json_string( JSON_VIEWER( subscribeViewer_ ), -1, nlohmann::to_string( *pJson ).c_str() ); } // TODO
+        void set_help_message( const gchar* helpText, int id )   // TODO
+            { 
+                if ( helpText != nullptr ) 
+                    gtk_text_buffer_set_text( pHelpBuffer_, helpText, -1 );
+                else 
+                    gtk_text_buffer_set_text( pHelpBuffer_, "", -1 );
+            }
 
     private:
         GtkWidget* subscribe_panel_new(); // build left panel of pParent
@@ -59,11 +65,11 @@ class Dashboard
         TemplateMap* get_template_map(gchar* const topic);
         TemplateMap* get_current_template_map() const;
 
-        static void OnMessageSampleSelectionChanged( GtkComboBox* pComboBox, Dashboard* pDashboard ); 
+        static void OnTemplateChooserChanged( GtkComboBox* pComboBox, Dashboard* pDashboard ); 
         static void OnSubscribeButtonToggled( GtkToggleButton* pButton, Dashboard* pDashboard ) ;
         static void OnPublishButtonClicked();
         static void OnSaveButtonClicked( GtkButton* pButton, Dashboard* pDashboard );
         static void OnUpdateTourneyIdButtonClicked( GtkButton* pButton, Dashboard* pDashboard ) ;
-        static void OnPublishTopicSelectionChanged( GtkComboBox* pComboBox, Dashboard* pDashboard );
+        static void OnPublishTopicChanged( GtkComboBox* pComboBox, Dashboard* pDashboard );
         static void OnSubscribeTopicSelectionChanged( GtkComboBox* pComboBox, Dashboard* pDashboard );
 };
