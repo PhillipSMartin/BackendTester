@@ -67,7 +67,6 @@ static void template_chooser_class_init( TemplateChooserClass* klass )
     // add private data
     g_type_class_add_private( klass, sizeof( TemplateChooserPrivate ) );
 
-
     // register the properties
     g_object_class_install_property( gobject_class, PROP_TOPIC,
         g_param_spec_string("topic",

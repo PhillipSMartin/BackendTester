@@ -2,13 +2,14 @@
 
 #include <gtk/gtk.h>
 #include <map>
+#include <memory>
 #include <set>
 
 #include "JsonViewer.h"
 #include "Logger.h"
+#include "nlohmann/json.hpp"
 #include "TemplateChooser.h"
 #include "Parameters.h"
-#include "TemplateMap.h"
 #include "TopicChooser.h"
 
 class Dashboard
@@ -20,11 +21,11 @@ class Dashboard
         GtkWidget* pParent_; // a horizontal window with three panes
 
         // leftmost panel for subscriptions
-        TopicChooser subscribeTopicChooser_; 
+        GtkWidget* subscribeTopicChooser_; 
         GtkWidget* subscribeViewer_; 
 
         // middle panel for publishing
-        TopicChooser publishTopicChooser_; 
+        GtkWidget* publishTopicChooser_; 
         GtkWidget* publishViewer_; 
 
         // rightmost panel for controls
@@ -35,8 +36,6 @@ class Dashboard
 
         std::set<std::string> subscribedTopics_;  // a list of topics we've subscribed to
         gboolean ignoreSubscribeButtonClick_ = FALSE; // set when we are changing the active state of the subscribe button programattically
-
-        std::map<std::string, TemplateMap*> templateMaps_; // keyed by topic prefix
 
     public:
         Dashboard(Parameters* pParms, Logger* pLogger);
@@ -62,14 +61,11 @@ class Dashboard
         GtkWidget* control_panel_new(); // build right panel of pParent
         GtkWidget* console_window_new(); 
 
-        TemplateMap* get_template_map(gchar* const topic);
-        TemplateMap* get_current_template_map() const;
-
         static void OnTemplateChooserChanged( GtkComboBox* pComboBox, Dashboard* pDashboard ); 
         static void OnSubscribeButtonToggled( GtkToggleButton* pButton, Dashboard* pDashboard ) ;
         static void OnPublishButtonClicked();
         static void OnSaveButtonClicked( GtkButton* pButton, Dashboard* pDashboard );
         static void OnUpdateTourneyIdButtonClicked( GtkButton* pButton, Dashboard* pDashboard ) ;
-        static void OnPublishTopicChanged( GtkComboBox* pComboBox, Dashboard* pDashboard );
-        static void OnSubscribeTopicSelectionChanged( GtkComboBox* pComboBox, Dashboard* pDashboard );
+        static void OnPublishTopicChanged( TopicChooser* pTopicChooser, Dashboard* pDashboard );
+        static void OnSubscribeTopicSelectionChanged( TopicChooser* pTopicChooser, Dashboard* pDashboard );
 };

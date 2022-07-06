@@ -18,7 +18,7 @@ static void template_list_store_class_init( TemplateListStoreClass* klass );
 static void template_list_store_init( TemplateListStore* templateListStore );
 
 static int template_list_store_generate_id();
-static int template_list_store_handle_error( Logger* pLogger, std::string const& prefix, GError* error ); 
+static int template_list_store_handle_error( Logger* pLogger, const gchar* prefix, GError* error ); 
 static int template_list_store_read_file( TemplateListStore* templateListStore, GIOChannel* channel );
 static int template_list_store_add_item( TemplateListStore*templateListStore, const gchar* line );
 static int template_list_store_generate_id();
@@ -74,11 +74,11 @@ static int template_list_store_generate_id()
 }
 
 // returns -1 if there was an error, 0 if not
-static int template_list_store_handle_error( Logger* pLogger, std::string const& prefix, GError* error ) 
+static int template_list_store_handle_error( Logger* pLogger, const gchar* prefix, GError* error ) 
 {
     if ( error != NULL )
     {
-        pLogger->Error( g_strdup_printf( "%s: %s", prefix.c_str(), error->message ) );
+        pLogger->Error( g_strdup_printf( "%s: %s", prefix, error->message ) );
         g_clear_error( &error );
         return -1;
     }

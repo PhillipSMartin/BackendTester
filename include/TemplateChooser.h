@@ -35,9 +35,6 @@ struct _TemplateChooser
 struct _TemplateChooserClass
 {
     GtkComboBoxClass parentClass_;
-
-    void (* json_edited) ( TemplateChooser* templateChooser );
-    void (* json_replaced) ( TemplateChooser* templateChooser );
 };
 
 GType template_chooser_get_type( void ) G_GNUC_CONST;

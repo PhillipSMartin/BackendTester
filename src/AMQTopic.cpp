@@ -1,5 +1,4 @@
 #include "AMQTopic.h"
-#include "JsonFormatter.h"
 
 AMQTopic::AMQTopic(std::string const& topicName, 
         ActiveMQSession* const& pSession, 

@@ -8,7 +8,6 @@ add_executable(BackendTester
     src/AMQClient.cpp
     src/AMQTopic.cpp
     src/Dashboard.cpp
-    src/JsonFormatter.cpp
     src/JsonTest.cpp 
     src/JsonTreeStore.cpp
     src/JsonViewer.cpp

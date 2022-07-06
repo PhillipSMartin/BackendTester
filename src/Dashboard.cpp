@@ -11,9 +11,9 @@ Dashboard::Dashboard(Parameters* pParms, Logger* pLogger) :
     pParms_(pParms),
     pLogger_(pLogger),
     pParent_(gtk_paned_new( GTK_ORIENTATION_VERTICAL )),
-    subscribeTopicChooser_(pParms, pLogger, TopicChooser::STATE_TB),
+    subscribeTopicChooser_(topic_chooser_new( pParms, pLogger, STATE_TB )),
     subscribeViewer_(json_viewer_new( pLogger, TRUE )),
-    publishTopicChooser_(pParms, pLogger, TopicChooser::EVENT_TB),
+    publishTopicChooser_(topic_chooser_new(pParms, pLogger, EVENT_TB )),
     publishViewer_(json_viewer_new( pLogger, FALSE )),
     pTourneyIdEntry_(gtk_entry_new()),
     templateChooser_(template_chooser_new( pLogger, pParms->get_working_directory() ))
@@ -40,17 +40,12 @@ Dashboard::Dashboard(Parameters* pParms, Logger* pLogger) :
     gtk_paned_set_position( GTK_PANED( pParent_) , 650 ); 
 
     // populate template combo box
-    g_signal_emit_by_name( G_OBJECT( publishTopicChooser_.get_combo_box() ), "changed" );
+    g_signal_emit_by_name( G_OBJECT( publishTopicChooser_ ), "changed" );
 
 }
 
 Dashboard::~Dashboard()
 {
-    for ( auto item : templateMaps_ )
-    {
-        free( item.second );
-    }
-    templateMaps_.clear();
 }
 
 GtkWidget* Dashboard::console_window_new()
@@ -75,10 +70,10 @@ GtkWidget* Dashboard::subscribe_panel_new()
     g_signal_connect( G_OBJECT( _pSubscribeButton ), "toggled", G_CALLBACK( OnSubscribeButtonToggled ), gpointer(this) );
     gtk_box_pack_start( GTK_BOX( _pSubscribePanel ), _pSubscribeButton, FALSE, TRUE, 0 );
 
-    gtk_box_pack_start( GTK_BOX( _pSubscribePanel ), subscribeTopicChooser_.get_parent(), FALSE, TRUE, 0 );
+    gtk_box_pack_start( GTK_BOX( _pSubscribePanel ), subscribeTopicChooser_, FALSE, TRUE, 0 );
     gtk_box_pack_start( GTK_BOX( _pSubscribePanel ), subscribeViewer_, TRUE, TRUE, 0 );
 
-    g_signal_connect( G_OBJECT( subscribeTopicChooser_.get_combo_box()), "changed", G_CALLBACK( OnSubscribeTopicSelectionChanged ), gpointer(this) );
+    g_signal_connect( G_OBJECT( subscribeTopicChooser_ ), "changed", G_CALLBACK( OnSubscribeTopicSelectionChanged ), gpointer(this) );
     return _pSubscribePanel;
 }
 
@@ -91,10 +86,10 @@ GtkWidget* Dashboard::publish_panel_new()
     GtkWidget* _pPublishButton = gtk_button_new_with_label( "Publish" );
     gtk_box_pack_start( GTK_BOX( _pPublishPanel ), _pPublishButton, FALSE, TRUE, 0 );
 
-    gtk_box_pack_start( GTK_BOX( _pPublishPanel ), publishTopicChooser_.get_parent(), FALSE, TRUE, 0 );
+    gtk_box_pack_start( GTK_BOX( _pPublishPanel ), publishTopicChooser_, FALSE, TRUE, 0 );
     gtk_box_pack_start( GTK_BOX( _pPublishPanel ), publishViewer_, TRUE, TRUE, 0 );
 
-    g_signal_connect( G_OBJECT( publishTopicChooser_.get_combo_box() ), "changed", G_CALLBACK( OnPublishTopicChanged ), gpointer(this) );
+    g_signal_connect( G_OBJECT( publishTopicChooser_ ), "changed", G_CALLBACK( OnPublishTopicChanged ), gpointer(this) );
     return _pPublishPanel;
 }
 
@@ -173,87 +168,47 @@ void Dashboard::OnUpdateTourneyIdButtonClicked( GtkButton* pButton, Dashboard* p
 
 void Dashboard::OnSubscribeButtonToggled( GtkToggleButton* pButton, Dashboard* pDashboard )
 {
-    if ( gtk_toggle_button_get_active( pButton ) )
+    gchar* _topic = topic_chooser_get_topic( TOPIC_CHOOSER( pDashboard->subscribeTopicChooser_ ) );
+    if ( _topic )
     {
-        gtk_button_set_label( GTK_BUTTON( pButton ), "Unsubscribe" );
-        if (!pDashboard->ignoreSubscribeButtonClick_) // if TRUE, we set the state -- user did not click
+        if ( gtk_toggle_button_get_active( pButton ) )
         {
-            // TODO subscribe
-            std::string _topic = pDashboard->subscribeTopicChooser_.get_topic();
-            pDashboard->subscribedTopics_.insert( _topic );
-            pDashboard->pLogger_->Info( g_strdup_printf( "Subscribed to ", _topic.c_str() ) );
+            gtk_button_set_label( GTK_BUTTON( pButton ), "Unsubscribe" );
+            if (!pDashboard->ignoreSubscribeButtonClick_) // if TRUE, we set the state -- user did not click
+            {
+                // TODO subscribe
+                pDashboard->subscribedTopics_.insert( _topic );
+                pDashboard->pLogger_->Info( g_strdup_printf( "Subscribed to ", _topic ) );
+            }
+        }
+        else
+        {
+            gtk_button_set_label( GTK_BUTTON( pButton ), "Subscribe" );
+            if ( !pDashboard->ignoreSubscribeButtonClick_ ) // if TRUE, we set the state -- user did not click
+            {
+                // TODO unsubscribe
+                pDashboard->subscribedTopics_.erase( _topic );
+                pDashboard->pLogger_->Info( g_strdup_printf( "Unsubscribed from ", _topic ) );
+            }
         }
     }
-    else
-    {
-        gtk_button_set_label( GTK_BUTTON( pButton ), "Subscribe" );
-        if ( !pDashboard->ignoreSubscribeButtonClick_ ) // if TRUE, we set the state -- user did not click
-        {
-           // TODO subscribe
-            std::string _topic = pDashboard->subscribeTopicChooser_.get_topic();
-            pDashboard->subscribedTopics_.erase( _topic );
-            pDashboard->pLogger_->Info( g_strdup_printf( "Unsubscribed from ", _topic.c_str() ));
-        }
-   }
+
+   g_free( _topic );
 }
 
-TemplateMap* Dashboard::get_template_map( gchar* const topic )
+void Dashboard::OnPublishTopicChanged( TopicChooser* pTopicChooser, Dashboard* pDashboard )
 {
-    TemplateMap* _map = NULL;
-
-    auto _it = templateMaps_.find( topic );
-    if ( _it == templateMaps_.end() )
-    {
-        // try to create map from templates file
-        std::string _fileName( topic );
-        _fileName += ".templates.txt";
-
-        _map = new TemplateMap( pLogger_ );
-        if (  0 > _map->import_file( _fileName ) )
-        {
-            return NULL; // error will be logged by import_file
-        }
-
-        templateMaps_[topic] = _map;
-    }
-    else
-    {
-        _map = _it->second;
-    }
-
-    return _map;
-}
-
-TemplateMap* Dashboard::get_current_template_map() const
-{
-    TemplateMap* _map = NULL;
-    gchar* _topic = gtk_combo_box_text_get_active_text( GTK_COMBO_BOX_TEXT( publishTopicChooser_.get_combo_box() ) );
-    auto _it = templateMaps_.find( _topic );
-    if ( _it != templateMaps_.end() )
-    {
-        _map = _it->second;
-    }
-    g_free( _topic );   
-    return _map;
-}
-
-void Dashboard::OnPublishTopicChanged( GtkComboBox* pComboBox, Dashboard* pDashboard )
-{
-    gchar* _topic = gtk_combo_box_text_get_active_text( GTK_COMBO_BOX_TEXT( pComboBox ) );
+    gchar* _topic = topic_chooser_get_topic_prefix( pTopicChooser );
     g_object_set( G_OBJECT( pDashboard->templateChooser_), "topic", _topic, NULL );
     g_free( _topic );
 }
 
 void Dashboard::OnSaveButtonClicked( GtkButton* pButton, Dashboard* pDashboard )
 {
-    auto _templateMap = pDashboard->get_current_template_map();
-    if ( _templateMap )
-    { 
-        _templateMap->export_file();
-    }   
+  
 }
 
-void Dashboard::OnSubscribeTopicSelectionChanged( GtkComboBox* pComboBox, Dashboard* pDashboard )
+void Dashboard::OnSubscribeTopicSelectionChanged( TopicChooser* pTopicChooser, Dashboard* pDashboard )
 {
 
 }
