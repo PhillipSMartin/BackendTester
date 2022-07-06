@@ -23,7 +23,7 @@ std::string TopicChooser::get_topic() const
 {
     gchar* _topic = g_strdup_printf( "%s=%s-%d", 
         topics_[gtk_combo_box_get_active( GTK_COMBO_BOX( pTopicPrefix_ ) )], 
-        pParms_->get_tourney_id().c_str(),
+        pParms_->get_tourney_id(),
         g_str_has_suffix( topics_[gtk_combo_box_get_active( GTK_COMBO_BOX( pTopicPrefix_ ) )], "tb" ) ?
             gtk_spin_button_get_value_as_int( GTK_SPIN_BUTTON( pTableNumber_ ) ) : 0 ); 
     std::string _s(_topic);

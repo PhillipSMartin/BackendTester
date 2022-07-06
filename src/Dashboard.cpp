@@ -109,7 +109,7 @@ GtkWidget* Dashboard::control_panel_new()
     GtkWidget* _pUpdate = gtk_button_new_with_label( "Update" );
     gtk_box_pack_start( GTK_BOX( _pTourneyIdChooser ), _pUpdate, FALSE, TRUE, 0 );
 
-    gtk_entry_set_text( GTK_ENTRY( pTourneyIdEntry_ ), pParms_->get_tourney_id().c_str() );
+    gtk_entry_set_text( GTK_ENTRY( pTourneyIdEntry_ ), pParms_->get_tourney_id() );
     g_signal_connect( G_OBJECT( _pUpdate ), "clicked", G_CALLBACK( OnUpdateTourneyIdButtonClicked ), gpointer(this) );
     gtk_box_pack_start( GTK_BOX( _pControlPanel ), _pTourneyIdChooser, FALSE, TRUE, 0 );
  

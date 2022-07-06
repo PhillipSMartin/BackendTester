@@ -5,7 +5,13 @@
 
 #include "Parameters.h"
 
-Parameters::LogLevel Parameters::StrToLogLevel( std::string const& logLevelStr )
+Parameters::~Parameters()
+{
+    g_free( tourneyId_ );
+    g_free( workingDirectory_ );
+}
+
+Parameters::LogLevel Parameters::str_to_log_level( std::string const& logLevelStr )
 {
     if ( logLevelStr == "DEBUG" ) { return LogLevel::DEBUG; }
     if ( logLevelStr == "INFO" ) { return LogLevel::INFO; }
@@ -17,7 +23,7 @@ Parameters::LogLevel Parameters::StrToLogLevel( std::string const& logLevelStr )
     return LogLevel::UNKNOWN;
 } 
 
-std::string Parameters::LogLevelToStr( Parameters::LogLevel const logLevel )
+std::string Parameters::log_level_to_str( Parameters::LogLevel const logLevel )
 {
     switch (logLevel)
     {
@@ -31,26 +37,25 @@ std::string Parameters::LogLevelToStr( Parameters::LogLevel const logLevel )
    }
 }
 
-std::string Parameters::determine_working_directory( const char* programName )
+gchar* Parameters::get_default_working_directory( const char* programName ) const
 {
     gchar* _executablePath = g_find_program_in_path( programName );
     gchar* _workingDirectory = g_path_get_dirname( _executablePath );
-    std::string _workingDirectoryString{ _workingDirectory };
     g_free( _executablePath );
-    g_free( _workingDirectory );
-    return _workingDirectoryString;
+    return _workingDirectory;
 }
 
 // returns FALSE if unable to parse command-line arguments
 // valid arguments are
-//      -t<id>          tourney id
-//      -l<LogLevel>    log level for logfile
-//      -c<LogLevel>    log level for console
+//      -t:<id>          tourney id
+//      -d:<path>        working directory (default is location of executable)
+//      -l:<LogLevel>    log level for logfile
+//      -c<:LogLevel>    log level for console
 // valid LogLevels are
 //      DEBUG, INFO, WARN, ERROR, FATAL
-gboolean Parameters::ParseArguments( int const argc, char** const& argv )
+gboolean Parameters::parse_arguments( int const argc, char** const& argv )
 {
-    workingDirectory_ = determine_working_directory( argv[0] );
+    set_working_directory( get_default_working_directory( argv[0] ) );
  
     int _opt;
     gboolean _rc = TRUE;
@@ -61,21 +66,24 @@ gboolean Parameters::ParseArguments( int const argc, char** const& argv )
        switch (_opt)
         {
             case 'l': 
-                fileLogLevel_ = StrToLogLevel( _optargstring );
+                fileLogLevel_ = str_to_log_level( _optargstring );
                 if ( fileLogLevel_ == LogLevel::UNKNOWN )
                 {
                     _rc = FALSE;
                 }
                 break;
             case 'c': 
-                consoleLogLevel_ = StrToLogLevel( _optargstring );
+                consoleLogLevel_ = str_to_log_level( _optargstring );
                 if ( consoleLogLevel_ == LogLevel::UNKNOWN )
                 {
                    _rc = FALSE;
                 }
                 break;
             case 't':
-                tourneyId_ = _optargstring;
+                set_tourney_id( _optargstring.c_str() );
+                break;
+            case 'd':
+                set_working_directory( _optargstring.c_str() );
                 break;
             default: 
                _rc = FALSE;
@@ -90,13 +98,19 @@ gboolean Parameters::ParseArguments( int const argc, char** const& argv )
 
     if ( !_rc )
     {
-        std::cout << "Usage:" << std::endl;
-        std::cout << "   -l<log level> (default is INFO)" << std::endl;
-        std::cout << "   -c<log level> (default is INFO)" << std::endl;
-        std::cout << "       Log levels for logfile and console respectively" << std::endl;
-        std::cout << "       Valid values are NONE, DEBUG, INFO, WARN, ERROR, and FATAL" << std::endl;
+        print_help();
     }
 
     return _rc;
 }
 
+void Parameters::print_help() const
+{
+        std::cout << "Usage:" << std::endl;
+        std::cout << "   -t:<tourney id>" << std::endl;          
+        std::cout << "   -d:<working directory> (default is location of executable)" << std::endl;
+        std::cout << "   -l:<log level> (default is INFO)" << std::endl;
+        std::cout << "   -c:<log level> (default is INFO)" << std::endl;
+        std::cout << "       Log levels for logfile and console respectively" << std::endl;
+        std::cout << "       Valid values are NONE, DEBUG, INFO, WARN, ERROR, and FATAL" << std::endl;
+}

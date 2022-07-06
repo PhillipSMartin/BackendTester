@@ -13,7 +13,7 @@ int main( int argc, char** argv )
 
     // build Parameters instance from command-line arguments
     Parameters _parms{};
-    if (!_parms.ParseArguments( argc, argv ) )
+    if (!_parms.parse_arguments( argc, argv ) )
     {
         exit( 0 );
     }
