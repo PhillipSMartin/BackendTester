@@ -7,7 +7,9 @@ enable_testing()
 add_executable(BackendTester 
     src/AMQClient.cpp
     src/AMQTopic.cpp
+    src/ConsoleViewer.cpp
     src/Dashboard.cpp
+    src/HelpViewer.cpp 
     src/JsonTest.cpp 
     src/JsonTreeStore.cpp
     src/JsonViewer.cpp
@@ -15,8 +17,8 @@ add_executable(BackendTester
     src/Parameters.cpp 
     src/TemplateChooser.cpp
     src/TemplateListStore.cpp
-    src/TemplateMap.cpp
-    src/TopicChooser.cpp)
+    src/TopicChooser.cpp
+    src/TourneyIdChooser.cpp)
 
 target_link_directories(BackendTester PUBLIC lib ../Bridge/backend/lib)
 

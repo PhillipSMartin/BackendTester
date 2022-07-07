@@ -1,4 +1,7 @@
+#include "ConsoleViewer.h"
 #include "Dashboard.h"
+#include "HelpViewer.h"
+#include "JsonViewer.h"
 
 // TODO - use pointer to string for help message
 //   try again with writing file
@@ -6,74 +9,111 @@
 //   implement save as
 //   try sending and receivimg msgs
 //   keep a queue of received messages and scroll through them
+// bugs
+//  tourney id can be changed only once
+//  empty topic id for subscribe
+//  template changes don't persist
 
 Dashboard::Dashboard(Parameters* pParms, Logger* pLogger) :
     pParms_(pParms),
     pLogger_(pLogger),
-    pParent_(gtk_paned_new( GTK_ORIENTATION_VERTICAL )),
-    subscribeTopicChooser_(topic_chooser_new( pParms, pLogger, STATE_TB )),
-    subscribeViewer_(json_viewer_new( pLogger, TRUE )),
-    publishTopicChooser_(topic_chooser_new(pParms, pLogger, EVENT_TB )),
-    publishViewer_(json_viewer_new( pLogger, FALSE )),
-    pTourneyIdEntry_(gtk_entry_new()),
-    templateChooser_(template_chooser_new( pLogger, pParms->get_working_directory() ))
+    pWidgets_((WidgetVault*) g_malloc (sizeof (WidgetVault)))
 {
-    gtk_widget_set_size_request( pParent_, 1200, 800 );  
-
-    // top panel will contain three horizontal panels
-    GtkWidget* _panels = gtk_paned_new( GTK_ORIENTATION_HORIZONTAL );
-    gtk_paned_add1( GTK_PANED( pParent_ ), _panels );
-
-    // two leftmost panels contain tree views
-    GtkWidget* _treeViewPanels = gtk_paned_new( GTK_ORIENTATION_HORIZONTAL );
-    gtk_paned_add1( GTK_PANED( _treeViewPanels ), subscribe_panel_new() );
-    gtk_paned_add2( GTK_PANED( _treeViewPanels ), publish_panel_new() );
-    gtk_paned_set_position(GTK_PANED( _treeViewPanels ), 400); 
-
-    // rightmost panel contains controls
-    gtk_paned_add1( GTK_PANED( _panels ), _treeViewPanels);
-    gtk_paned_add2( GTK_PANED( _panels ), control_panel_new() );
-    gtk_paned_set_position( GTK_PANED( _panels ), 820 ); 
-
-    // bottom panel will be console window
-    gtk_paned_add2( GTK_PANED( pParent_ ),  console_window_new() );
-    gtk_paned_set_position( GTK_PANED( pParent_) , 650 ); 
+    instantiate_widgets();
+    arrange_widgets();
+    wire_signals();
 
     // populate template combo box
-    g_signal_emit_by_name( G_OBJECT( publishTopicChooser_ ), "changed" );
-
+    g_signal_emit_by_name( G_OBJECT( pWidgets_->publishTopicChooser_ ), "changed" );
 }
 
 Dashboard::~Dashboard()
 {
+    g_free( pWidgets_ );
 }
 
-GtkWidget* Dashboard::console_window_new()
+// private methods
+void Dashboard::instantiate_widgets()
 {
-    GtkWidget* _pScrolledConsoleWindow = gtk_scrolled_window_new( NULL, NULL );
-    GtkWidget* _pConsoleWindow = gtk_text_view_new();
-    gtk_scrolled_window_set_policy ( GTK_SCROLLED_WINDOW( _pScrolledConsoleWindow ), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC );
-    gtk_container_add( GTK_CONTAINER( _pScrolledConsoleWindow ), _pConsoleWindow );
-    pConsoleBuffer_ = gtk_text_view_get_buffer( GTK_TEXT_VIEW( _pConsoleWindow ) );
-    pLogger_->set_text_buffer( pConsoleBuffer_ );
+    // main window
+    pWidgets_->mainWindow_ = gtk_window_new( GTK_WINDOW_TOPLEVEL );
 
-    return _pScrolledConsoleWindow;
+    // panes
+    pWidgets_->verticalPane_ = gtk_paned_new( GTK_ORIENTATION_VERTICAL );
+    pWidgets_->horizontalPane_ = gtk_paned_new( GTK_ORIENTATION_HORIZONTAL );
+    pWidgets_->jsonViewerPane_ = gtk_paned_new( GTK_ORIENTATION_HORIZONTAL );
+ 
+    // viewers
+    pWidgets_->subscribeJsonViewer_ = json_viewer_new( pLogger_, TRUE );
+    pWidgets_->publishJsonViewer_ = json_viewer_new( pLogger_, FALSE );
+    pWidgets_->consoleViewer_ = console_viewer_new( pLogger_ ); 
+    pWidgets_->helpViewer_ = help_viewer_new();
+
+    // choosers
+    pWidgets_->subscribeTopicChooser_ = topic_chooser_new( pParms_, pLogger_, STATE_TB );
+    pWidgets_->publishTopicChooser_ = topic_chooser_new(pParms_, pLogger_, EVENT_TB );
+    pWidgets_->templateChooser_ = template_chooser_new( pLogger_, pParms_->get_working_directory() );
+    pWidgets_->tourneyIdChooser_ = tourney_id_chooser_new( pParms_->get_tourney_id() );
+
+    // buttons
+    pWidgets_->subscribeButton_ = gtk_toggle_button_new_with_label( "Subscribe" );
+    pWidgets_->publishButton_ = gtk_button_new_with_label( "Publish" );
+    pWidgets_->saveTemplateButton_ = gtk_button_new_with_label( "Save" );
+
+    // panels
+    pWidgets_->subscribePanel_ = subscribe_panel_new();    
+    pWidgets_->publishPanel_ = publish_panel_new();    
+    pWidgets_->controlPanel_ = control_panel_new();
+}
+
+void Dashboard::arrange_widgets()
+{
+    // main window
+    gtk_window_set_title( GTK_WINDOW( pWidgets_->mainWindow_ ), "Backend Tester" );
+    gtk_container_set_border_width( GTK_CONTAINER( pWidgets_->mainWindow_ ), 10 ); 
+    gtk_container_add( GTK_CONTAINER( pWidgets_->mainWindow_ ), pWidgets_->verticalPane_ );
+
+    // vertical pane
+    gtk_widget_set_size_request( pWidgets_->verticalPane_, 1200, 800 ); 
+    gtk_paned_add1( GTK_PANED( pWidgets_->verticalPane_ ), pWidgets_->horizontalPane_ );
+    gtk_paned_add2( GTK_PANED( pWidgets_->verticalPane_  ), pWidgets_->consoleViewer_ );
+    gtk_paned_set_position( GTK_PANED( pWidgets_->verticalPane_ ) , 647 );
+
+    // two left panes and one right pane
+    gtk_paned_add1( GTK_PANED( pWidgets_->horizontalPane_ ), pWidgets_->jsonViewerPane_ );
+    gtk_paned_add2( GTK_PANED( pWidgets_->horizontalPane_  ), pWidgets_->controlPanel_ );
+    gtk_paned_set_position( GTK_PANED( pWidgets_->horizontalPane_ ) , 820 );  
+ 
+    // left panes
+    gtk_paned_add1( GTK_PANED( pWidgets_->jsonViewerPane_ ), pWidgets_->subscribePanel_ );
+    gtk_paned_add2( GTK_PANED( pWidgets_->jsonViewerPane_  ), pWidgets_->publishPanel_ );
+    gtk_paned_set_position( GTK_PANED( pWidgets_->jsonViewerPane_ ) , 400 );     
+}
+
+void Dashboard::wire_signals()
+{
+    g_signal_connect( G_OBJECT( pWidgets_->subscribeTopicChooser_ ), "changed", G_CALLBACK( OnSubscribeTopicChanged ), gpointer(this) );
+    g_signal_connect( G_OBJECT( pWidgets_->publishTopicChooser_ ), "changed", G_CALLBACK( OnPublishTopicChanged ), gpointer(this) );
+    g_signal_connect( G_OBJECT( pWidgets_->templateChooser_ ), "changed", G_CALLBACK( OnMessageTemplateChanged ), gpointer(this) ); 
+    g_signal_connect( G_OBJECT( pWidgets_->tourneyIdChooser_), "changed", G_CALLBACK( OnTourneyIdChanged ), gpointer(this) ); 
+ 
+ 
+    g_signal_connect( G_OBJECT( pWidgets_->subscribeButton_ ), "toggled", G_CALLBACK( OnSubscribeButtonClicked ), gpointer(this) );
+    g_signal_connect( G_OBJECT( pWidgets_->publishButton_ ), "clicked", G_CALLBACK( OnPublishButtonClicked ), gpointer(this) );
+    g_signal_connect( G_OBJECT( pWidgets_->saveTemplateButton_ ), "clicked", G_CALLBACK( OnSaveButtonClicked ), gpointer(this) );
+ 
+    g_signal_connect( G_OBJECT( pWidgets_->mainWindow_ ), "destroy", G_CALLBACK( OnMainWindowDestroy ), gpointer( pLogger_ ) ); 
 }
 
 GtkWidget* Dashboard::subscribe_panel_new()
 {
     GtkWidget* _pSubscribePanel = gtk_box_new( GTK_ORIENTATION_VERTICAL, 10 ); 
     gtk_container_set_border_width( GTK_CONTAINER( _pSubscribePanel ), 10 );
+    
+    gtk_box_pack_start( GTK_BOX( _pSubscribePanel ), pWidgets_->subscribeButton_, FALSE, TRUE, 0 );
+    gtk_box_pack_start( GTK_BOX( _pSubscribePanel ), pWidgets_->subscribeTopicChooser_, FALSE, TRUE, 0 );
+    gtk_box_pack_start( GTK_BOX( _pSubscribePanel ), pWidgets_->subscribeJsonViewer_, TRUE, TRUE, 0 );
 
-    // add topic controls
-    GtkWidget* _pSubscribeButton = gtk_toggle_button_new_with_label( "Subscribe" );
-    g_signal_connect( G_OBJECT( _pSubscribeButton ), "toggled", G_CALLBACK( OnSubscribeButtonToggled ), gpointer(this) );
-    gtk_box_pack_start( GTK_BOX( _pSubscribePanel ), _pSubscribeButton, FALSE, TRUE, 0 );
-
-    gtk_box_pack_start( GTK_BOX( _pSubscribePanel ), subscribeTopicChooser_, FALSE, TRUE, 0 );
-    gtk_box_pack_start( GTK_BOX( _pSubscribePanel ), subscribeViewer_, TRUE, TRUE, 0 );
-
-    g_signal_connect( G_OBJECT( subscribeTopicChooser_ ), "changed", G_CALLBACK( OnSubscribeTopicSelectionChanged ), gpointer(this) );
     return _pSubscribePanel;
 }
 
@@ -81,15 +121,11 @@ GtkWidget* Dashboard::publish_panel_new()
 {
     GtkWidget* _pPublishPanel = gtk_box_new( GTK_ORIENTATION_VERTICAL, 10 ); 
     gtk_container_set_border_width( GTK_CONTAINER( _pPublishPanel ), 10 );
+;
+    gtk_box_pack_start( GTK_BOX( _pPublishPanel ), pWidgets_->publishButton_, FALSE, TRUE, 0 );
+    gtk_box_pack_start( GTK_BOX( _pPublishPanel ), pWidgets_->publishTopicChooser_, FALSE, TRUE, 0 );
+    gtk_box_pack_start( GTK_BOX( _pPublishPanel ), pWidgets_->publishJsonViewer_, TRUE, TRUE, 0 );
 
-    // add topic controls
-    GtkWidget* _pPublishButton = gtk_button_new_with_label( "Publish" );
-    gtk_box_pack_start( GTK_BOX( _pPublishPanel ), _pPublishButton, FALSE, TRUE, 0 );
-
-    gtk_box_pack_start( GTK_BOX( _pPublishPanel ), publishTopicChooser_, FALSE, TRUE, 0 );
-    gtk_box_pack_start( GTK_BOX( _pPublishPanel ), publishViewer_, TRUE, TRUE, 0 );
-
-    g_signal_connect( G_OBJECT( publishTopicChooser_ ), "changed", G_CALLBACK( OnPublishTopicChanged ), gpointer(this) );
     return _pPublishPanel;
 }
 
@@ -98,50 +134,35 @@ GtkWidget* Dashboard::control_panel_new()
     GtkWidget* _pControlPanel = gtk_box_new( GTK_ORIENTATION_VERTICAL, 10 ); 
     gtk_container_set_border_width( GTK_CONTAINER( _pControlPanel ), 10 );
 
-    // add TourneyId chooser
-    GtkWidget* _pTourneyIdChooser = gtk_box_new( GTK_ORIENTATION_HORIZONTAL, 10 );
-    gtk_box_pack_start( GTK_BOX( _pTourneyIdChooser ), gtk_label_new( "Tourney Id: " ), FALSE, TRUE, 0 );
-    gtk_box_pack_start( GTK_BOX( _pTourneyIdChooser ), pTourneyIdEntry_, TRUE, TRUE, 0);
-    GtkWidget* _pUpdate = gtk_button_new_with_label( "Update" );
-    gtk_box_pack_start( GTK_BOX( _pTourneyIdChooser ), _pUpdate, FALSE, TRUE, 0 );
-
-    gtk_entry_set_text( GTK_ENTRY( pTourneyIdEntry_ ), pParms_->get_tourney_id() );
-    g_signal_connect( G_OBJECT( _pUpdate ), "clicked", G_CALLBACK( OnUpdateTourneyIdButtonClicked ), gpointer(this) );
-    gtk_box_pack_start( GTK_BOX( _pControlPanel ), _pTourneyIdChooser, FALSE, TRUE, 0 );
- 
-    // add TemplateChooser with label
-    GtkWidget* _pBoxTemplateChooser = gtk_box_new( GTK_ORIENTATION_HORIZONTAL, 10 );
-    gtk_box_pack_start( GTK_BOX( _pBoxTemplateChooser ), gtk_label_new( "Template: " ), FALSE, FALSE, 0 );
-    g_signal_connect( G_OBJECT( templateChooser_ ), "changed", G_CALLBACK( OnTemplateChooserChanged ), gpointer(this) );  
-    gtk_box_pack_start( GTK_BOX( _pBoxTemplateChooser) , templateChooser_, TRUE, TRUE, 0 );
-    gtk_box_pack_start( GTK_BOX( _pControlPanel ), _pBoxTemplateChooser, FALSE, TRUE, 0 );
-
-    // add buttons
-    GtkWidget* _pBoxButtons = gtk_box_new( GTK_ORIENTATION_HORIZONTAL, 10 );
-    GtkWidget* _pButtonSave = gtk_button_new_with_label( "Save" );
-    g_signal_connect( G_OBJECT( _pButtonSave ), "clicked", G_CALLBACK( OnSaveButtonClicked ), gpointer(this) );
-    gtk_box_pack_start( GTK_BOX( _pBoxButtons) , _pButtonSave, TRUE, TRUE, 0 );  
-    gtk_box_pack_start( GTK_BOX( _pControlPanel ), _pBoxButtons, FALSE, TRUE, 0 );  
-
-    // add help window
-    GtkWidget* _pScrolledHelpWindow = gtk_scrolled_window_new( NULL, NULL );
-    GtkWidget* _pHelpWindow = gtk_text_view_new();
-    gtk_scrolled_window_set_policy ( GTK_SCROLLED_WINDOW ( _pScrolledHelpWindow ), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC );
-    gtk_container_add( GTK_CONTAINER( _pScrolledHelpWindow ), _pHelpWindow );
-    pHelpBuffer_ = gtk_text_view_get_buffer( GTK_TEXT_VIEW( _pHelpWindow ) );
+    gtk_box_pack_start( GTK_BOX( _pControlPanel ), pWidgets_->tourneyIdChooser_, FALSE, TRUE, 0 );
+    gtk_box_pack_start( GTK_BOX( _pControlPanel ), pWidgets_->templateChooser_, FALSE, TRUE, 0 );
+    gtk_box_pack_start( GTK_BOX( _pControlPanel ), pWidgets_->saveTemplateButton_, FALSE, TRUE, 0 );
     gtk_box_pack_start( GTK_BOX( _pControlPanel ), gtk_label_new( "Help" ), FALSE, TRUE, 0 );
-    gtk_box_pack_start( GTK_BOX( _pControlPanel ), _pScrolledHelpWindow, TRUE, TRUE, 0 ); 
+    gtk_box_pack_start( GTK_BOX( _pControlPanel ), pWidgets_->helpViewer_, TRUE, TRUE, 0 ); 
 
     return _pControlPanel;
 }
 
-void Dashboard::OnTemplateChooserChanged( GtkComboBox* pComboBox, Dashboard* pDashboard )
+// callbacks
+void Dashboard::OnSubscribeTopicChanged( TopicChooser* pTopicChooser, Dashboard* pDashboard )
+{
+
+}
+
+void Dashboard::OnPublishTopicChanged( TopicChooser* pTopicChooser, Dashboard* pDashboard )
+{
+    gchar* _topic = topic_chooser_get_topic_prefix( pTopicChooser );
+    g_object_set( G_OBJECT( pDashboard->pWidgets_->templateChooser_ ), "topic", _topic, NULL );
+    g_free( _topic );
+}
+
+void Dashboard::OnMessageTemplateChanged( TemplateChooser* pTemplateChooser, Dashboard* pDashboard )
 {
  
     int _id = -1;
-    gchar* _templateName = template_chooser_get_template_name( TEMPLATE_CHOOSER( pComboBox ) );
-    gchar* _template = template_chooser_get_template( TEMPLATE_CHOOSER( pComboBox ), &_id );
-    gchar* _helpText = template_chooser_get_help_text( TEMPLATE_CHOOSER( pComboBox ), NULL );
+    gchar* _templateName = template_chooser_get_template_name( TEMPLATE_CHOOSER( pTemplateChooser ) );
+    gchar* _template = template_chooser_get_template( TEMPLATE_CHOOSER( pTemplateChooser ), &_id );
+    gchar* _helpText = template_chooser_get_help_text( TEMPLATE_CHOOSER( pTemplateChooser ), NULL );
 
     if ( _id >= 0 )
     { 
@@ -160,15 +181,15 @@ void Dashboard::OnTemplateChooserChanged( GtkComboBox* pComboBox, Dashboard* pDa
     g_free( _helpText );
 }
 
-void Dashboard::OnUpdateTourneyIdButtonClicked( GtkButton* pButton, Dashboard* pDashboard )
+void Dashboard::OnTourneyIdChanged( TourneyIdChooser* pTourneyIdChooser, Dashboard* pDashboard )
 {
-    pDashboard->pParms_->set_tourney_id( gtk_entry_get_text( GTK_ENTRY( pDashboard->pTourneyIdEntry_ ) ) );;
-    pDashboard->pLogger_->Info( g_strdup_printf( "Tourney id changed to %s", gtk_entry_get_text( GTK_ENTRY( pDashboard->pTourneyIdEntry_ ) ) ) );
+    pDashboard->pParms_->set_tourney_id( tourney_id_chooser_get_tourney_id( pTourneyIdChooser ) );;
+    pDashboard->pLogger_->Info( g_strdup_printf( "Tourney id changed to %s", pDashboard->pParms_->get_tourney_id() ) );
 }
 
-void Dashboard::OnSubscribeButtonToggled( GtkToggleButton* pButton, Dashboard* pDashboard )
+void Dashboard::OnSubscribeButtonClicked( GtkToggleButton* pButton, Dashboard* pDashboard )
 {
-    gchar* _topic = topic_chooser_get_topic( TOPIC_CHOOSER( pDashboard->subscribeTopicChooser_ ) );
+    gchar* _topic = topic_chooser_get_topic( TOPIC_CHOOSER( pDashboard->pWidgets_->subscribeTopicChooser_ ) );
     if ( _topic )
     {
         if ( gtk_toggle_button_get_active( pButton ) )
@@ -196,11 +217,9 @@ void Dashboard::OnSubscribeButtonToggled( GtkToggleButton* pButton, Dashboard* p
    g_free( _topic );
 }
 
-void Dashboard::OnPublishTopicChanged( TopicChooser* pTopicChooser, Dashboard* pDashboard )
+void Dashboard::OnPublishButtonClicked( GtkButton* pButton, Dashboard* pDashboard )
 {
-    gchar* _topic = topic_chooser_get_topic_prefix( pTopicChooser );
-    g_object_set( G_OBJECT( pDashboard->templateChooser_), "topic", _topic, NULL );
-    g_free( _topic );
+
 }
 
 void Dashboard::OnSaveButtonClicked( GtkButton* pButton, Dashboard* pDashboard )
@@ -208,7 +227,30 @@ void Dashboard::OnSaveButtonClicked( GtkButton* pButton, Dashboard* pDashboard )
   
 }
 
-void Dashboard::OnSubscribeTopicSelectionChanged( TopicChooser* pTopicChooser, Dashboard* pDashboard )
+void Dashboard::OnMainWindowDestroy( GtkWidget* window, Logger* pLogger )
 {
+    pLogger->set_text_buffer( NULL );
+    gtk_main_quit();
+}
 
+// public methods
+void Dashboard::set_publish_message( const gchar* text, int id ) 
+{ 
+    json_viewer_set_json_string( JSON_VIEWER( pWidgets_->publishJsonViewer_ ), id, text ); 
+}
+
+void Dashboard::set_subscribe_message( const gchar* text ) 
+{ 
+    json_viewer_set_json_string( JSON_VIEWER( pWidgets_->subscribeJsonViewer_ ), -1, text ); 
+} 
+
+void Dashboard::set_help_message( const gchar* text, int id )  
+{ 
+    help_viewer_set_text( HELP_VIEWER( pWidgets_->helpViewer_ ), id, text ); 
+} 
+
+void Dashboard::run()
+{
+    gtk_widget_show_all( pWidgets_->mainWindow_ );  
+    gtk_main();
 }
