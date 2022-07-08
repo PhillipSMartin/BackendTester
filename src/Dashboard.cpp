@@ -1,18 +1,15 @@
 #include "ConsoleViewer.h"
 #include "Dashboard.h"
 #include "HelpViewer.h"
-#include "JsonViewer.h"
 
 // TODO - use pointer to string for help message
-//   try again with writing file
-//   keep track of whether there are changes and enable save button accordingly
+//   must copy tmp file
 //   implement save as
 //   try sending and receivimg msgs
 //   keep a queue of received messages and scroll through them
 // bugs
-//  tourney id can be changed only once
-//  empty topic id for subscribe
-//  template changes don't persist
+//   problem with second line of file
+//   publish topic does not include table number
 
 Dashboard::Dashboard(Parameters* pParms, Logger* pLogger) :
     pParms_(pParms),
@@ -92,17 +89,56 @@ void Dashboard::arrange_widgets()
 
 void Dashboard::wire_signals()
 {
-    g_signal_connect( G_OBJECT( pWidgets_->subscribeTopicChooser_ ), "changed", G_CALLBACK( OnSubscribeTopicChanged ), gpointer(this) );
-    g_signal_connect( G_OBJECT( pWidgets_->publishTopicChooser_ ), "changed", G_CALLBACK( OnPublishTopicChanged ), gpointer(this) );
-    g_signal_connect( G_OBJECT( pWidgets_->templateChooser_ ), "changed", G_CALLBACK( OnMessageTemplateChanged ), gpointer(this) ); 
-    g_signal_connect( G_OBJECT( pWidgets_->tourneyIdChooser_), "changed", G_CALLBACK( OnTourneyIdChanged ), gpointer(this) ); 
+    g_signal_connect( G_OBJECT( pWidgets_->subscribeTopicChooser_ ), "changed", G_CALLBACK( OnSubscribeTopicChanged ), gpointer( this ) );
+    g_signal_connect( G_OBJECT( pWidgets_->publishTopicChooser_ ), "changed", G_CALLBACK( OnPublishTopicChanged ), gpointer( this ) );
+    g_signal_connect( G_OBJECT( pWidgets_->templateChooser_ ), "changed", G_CALLBACK( OnTemplateChanged ), gpointer( this ) ); 
+    g_signal_connect( G_OBJECT( pWidgets_->tourneyIdChooser_), "changed", G_CALLBACK( OnTourneyIdChanged ), gpointer( this ) ); 
  
- 
-    g_signal_connect( G_OBJECT( pWidgets_->subscribeButton_ ), "toggled", G_CALLBACK( OnSubscribeButtonClicked ), gpointer(this) );
-    g_signal_connect( G_OBJECT( pWidgets_->publishButton_ ), "clicked", G_CALLBACK( OnPublishButtonClicked ), gpointer(this) );
-    g_signal_connect( G_OBJECT( pWidgets_->saveTemplateButton_ ), "clicked", G_CALLBACK( OnSaveButtonClicked ), gpointer(this) );
+    subscribe_button_handler_id = g_signal_connect( G_OBJECT( pWidgets_->subscribeButton_ ), "toggled", G_CALLBACK( OnSubscribeButtonClicked ), gpointer( this ) );
+    g_signal_connect( G_OBJECT( pWidgets_->subscribeButton_ ), "query-tooltip", G_CALLBACK( OnSubscribeButtonToolTip ), gpointer( this ) );
+    g_signal_connect( G_OBJECT( pWidgets_->publishButton_ ), "clicked", G_CALLBACK( OnPublishButtonClicked ), gpointer( this ) );
+    g_signal_connect( G_OBJECT( pWidgets_->saveTemplateButton_ ), "clicked", G_CALLBACK( OnSaveButtonClicked ), gpointer( this ) );
+
+    g_signal_connect( G_OBJECT( pWidgets_->publishJsonViewer_ ), "json-edited", G_CALLBACK( OnJsonEdited ), gpointer( this ) );
+    g_signal_connect( G_OBJECT( pWidgets_->publishJsonViewer_ ), "json-replaced", G_CALLBACK( OnJsonReplaced ), gpointer( this ) );
  
     g_signal_connect( G_OBJECT( pWidgets_->mainWindow_ ), "destroy", G_CALLBACK( OnMainWindowDestroy ), gpointer( pLogger_ ) ); 
+}
+
+void Dashboard::manage_subscribe_button_state( const gchar* topic )
+{
+    if ( topic )
+    {
+        g_signal_handler_block( G_OBJECT( pWidgets_->subscribeButton_ ), subscribe_button_handler_id );
+        if ( subscribedTopics_.find( topic ) == subscribedTopics_.end() )
+        {
+            gtk_button_set_label( GTK_BUTTON( pWidgets_->subscribeButton_ ), "Subscribe" );
+            gtk_toggle_button_set_active( GTK_TOGGLE_BUTTON( pWidgets_->subscribeButton_ ), FALSE );
+        }
+        else
+        {
+            gtk_button_set_label( GTK_BUTTON( pWidgets_->subscribeButton_ ), "Unsubscribe" );
+            gtk_toggle_button_set_active( GTK_TOGGLE_BUTTON( pWidgets_->subscribeButton_ ), TRUE );
+        }  
+        g_signal_handler_unblock( G_OBJECT( pWidgets_->subscribeButton_ ), subscribe_button_handler_id );    
+    }   
+}
+
+gchar* Dashboard::get_subscribed_topics_tooltip_text()
+{
+    std::string _tooltipText{ "Subscribed topics:" };
+    if (subscribedTopics_.size() == 0)
+    {
+        _tooltipText += "\n   None";
+    }
+    else
+    {
+        for ( std::string _topic : subscribedTopics_ )
+        {
+           _tooltipText += "\n   " + _topic; 
+        }
+    }
+    return g_strdup( _tooltipText.c_str() );
 }
 
 GtkWidget* Dashboard::subscribe_panel_new()
@@ -113,6 +149,8 @@ GtkWidget* Dashboard::subscribe_panel_new()
     gtk_box_pack_start( GTK_BOX( _pSubscribePanel ), pWidgets_->subscribeButton_, FALSE, TRUE, 0 );
     gtk_box_pack_start( GTK_BOX( _pSubscribePanel ), pWidgets_->subscribeTopicChooser_, FALSE, TRUE, 0 );
     gtk_box_pack_start( GTK_BOX( _pSubscribePanel ), pWidgets_->subscribeJsonViewer_, TRUE, TRUE, 0 );
+
+    gtk_widget_set_has_tooltip(  pWidgets_->subscribeButton_, TRUE );
 
     return _pSubscribePanel;
 }
@@ -140,13 +178,17 @@ GtkWidget* Dashboard::control_panel_new()
     gtk_box_pack_start( GTK_BOX( _pControlPanel ), gtk_label_new( "Help" ), FALSE, TRUE, 0 );
     gtk_box_pack_start( GTK_BOX( _pControlPanel ), pWidgets_->helpViewer_, TRUE, TRUE, 0 ); 
 
+    gtk_widget_set_sensitive( pWidgets_->saveTemplateButton_, FALSE );
+
     return _pControlPanel;
 }
 
 // callbacks
 void Dashboard::OnSubscribeTopicChanged( TopicChooser* pTopicChooser, Dashboard* pDashboard )
 {
-
+    gchar* _topic = topic_chooser_get_topic( pTopicChooser );
+    pDashboard->manage_subscribe_button_state( _topic );
+    g_free( _topic );
 }
 
 void Dashboard::OnPublishTopicChanged( TopicChooser* pTopicChooser, Dashboard* pDashboard )
@@ -156,7 +198,7 @@ void Dashboard::OnPublishTopicChanged( TopicChooser* pTopicChooser, Dashboard* p
     g_free( _topic );
 }
 
-void Dashboard::OnMessageTemplateChanged( TemplateChooser* pTemplateChooser, Dashboard* pDashboard )
+void Dashboard::OnTemplateChanged( TemplateChooser* pTemplateChooser, Dashboard* pDashboard )
 {
  
     int _id = -1;
@@ -166,7 +208,7 @@ void Dashboard::OnMessageTemplateChanged( TemplateChooser* pTemplateChooser, Das
 
     if ( _id >= 0 )
     { 
-        pDashboard->pLogger_->Debug( g_strdup_printf( "Template changed to %s", _templateName ) );
+        pDashboard->pLogger_->Debug( g_strdup_printf( "Template changed to '%s'", _templateName ) );
         pDashboard->set_publish_message( _template, _id );
         pDashboard->set_help_message( _helpText, _id );
     }
@@ -194,27 +236,28 @@ void Dashboard::OnSubscribeButtonClicked( GtkToggleButton* pButton, Dashboard* p
     {
         if ( gtk_toggle_button_get_active( pButton ) )
         {
-            gtk_button_set_label( GTK_BUTTON( pButton ), "Unsubscribe" );
-            if (!pDashboard->ignoreSubscribeButtonClick_) // if TRUE, we set the state -- user did not click
-            {
-                // TODO subscribe
-                pDashboard->subscribedTopics_.insert( _topic );
-                pDashboard->pLogger_->Info( g_strdup_printf( "Subscribed to ", _topic ) );
-            }
+            // TODO subscribe
+            pDashboard->subscribedTopics_.insert( _topic );
+            pDashboard->pLogger_->Info( g_strdup_printf( "Subscribed to %s", _topic ) );
         }
-        else
+         else
         {
-            gtk_button_set_label( GTK_BUTTON( pButton ), "Subscribe" );
-            if ( !pDashboard->ignoreSubscribeButtonClick_ ) // if TRUE, we set the state -- user did not click
-            {
-                // TODO unsubscribe
-                pDashboard->subscribedTopics_.erase( _topic );
-                pDashboard->pLogger_->Info( g_strdup_printf( "Unsubscribed from ", _topic ) );
-            }
+            // TODO unsubscribe
+            pDashboard->subscribedTopics_.erase( _topic );
+            pDashboard->pLogger_->Info( g_strdup_printf( "Unsubscribed from %s", _topic ) );
         }
-    }
 
-   g_free( _topic );
+        pDashboard->manage_subscribe_button_state( _topic );
+    }
+    g_free( _topic );
+}
+
+bool Dashboard::OnSubscribeButtonToolTip( GtkWidget* pButton, gint x, gint y, gboolean keyboard_mode, GtkTooltip* pTooltip, Dashboard* pDashboard )
+{
+    gchar* _tooltipText = pDashboard->get_subscribed_topics_tooltip_text();
+    gtk_tooltip_set_text( pTooltip,  _tooltipText );
+    g_free( _tooltipText );
+    return TRUE;
 }
 
 void Dashboard::OnPublishButtonClicked( GtkButton* pButton, Dashboard* pDashboard )
@@ -224,7 +267,20 @@ void Dashboard::OnPublishButtonClicked( GtkButton* pButton, Dashboard* pDashboar
 
 void Dashboard::OnSaveButtonClicked( GtkButton* pButton, Dashboard* pDashboard )
 {
-  
+    template_chooser_save_changes( TEMPLATE_CHOOSER( pDashboard->pWidgets_->templateChooser_ ) );
+}
+
+void Dashboard::OnJsonEdited( JsonViewer* pJsonViewer, Dashboard* pDashboard )
+{
+    gtk_widget_set_sensitive( pDashboard->pWidgets_->saveTemplateButton_, TRUE );
+    int _id;
+    gchar* _text = json_viewer_get_json_string( pJsonViewer, &_id );
+    template_chooser_update_template( TEMPLATE_CHOOSER( pDashboard->pWidgets_->templateChooser_ ), _text, _id );      
+}
+
+void Dashboard::OnJsonReplaced( JsonViewer* pJsonViewer, Dashboard* pDashboard )
+{
+    gtk_widget_set_sensitive( pDashboard->pWidgets_->saveTemplateButton_, FALSE );
 }
 
 void Dashboard::OnMainWindowDestroy( GtkWidget* window, Logger* pLogger )

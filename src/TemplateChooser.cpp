@@ -27,7 +27,11 @@ static void template_chooser_class_init( TemplateChooserClass* klass );
 static void template_chooser_init( TemplateChooser* templateChooser );
 static void template_chooser_get_property( GObject*, guint, GValue*, GParamSpec* );
 static void template_chooser_set_property( GObject*, guint, const GValue*, GParamSpec* );
+// returns number of templates imported or -1 on an error
 static void template_chooser_set_topic( TemplateChooser* templateChooser, const gchar* topic );
+// returns false if no current selection
+// pointer (except iter) can be NULL if we are not interested in the value
+static gboolean template_chooser_get_current_values( TemplateChooser* templateChooser, GtkTreeIter *iter, int* id, gchar** templateName, gchar** templateText, gchar** helpText );
 
 // Type registration
 GType template_chooser_get_type( void )
@@ -145,6 +149,36 @@ static void template_chooser_set_topic( TemplateChooser* templateChooser, const 
     g_free( _templateFileName );
 }
 
+// returns false if no current selection
+// pointer (except iter) can be NULL if we are not interested in the value
+static gboolean template_chooser_get_current_values( TemplateChooser* templateChooser, GtkTreeIter *iter, int *id, gchar** templateName, gchar** templateText, gchar** helpText)
+{
+    TemplateChooserPrivate* _priv = TEMPLATE_CHOOSER_GET_PRIVATE( templateChooser );
+
+    if ( !gtk_combo_box_get_active_iter( GTK_COMBO_BOX( templateChooser ), iter ) )
+    {
+        return FALSE;
+    }
+
+    if (id != NULL)
+    {
+        gtk_tree_model_get( GTK_TREE_MODEL( _priv->pListStore_ ), iter, ID, id, -1 );
+    }
+    if (templateName != NULL)
+    {
+        gtk_tree_model_get( GTK_TREE_MODEL( _priv->pListStore_ ), iter, KEY, templateName, -1 );
+    }
+    if (templateText != NULL)
+    {
+        gtk_tree_model_get( GTK_TREE_MODEL( _priv->pListStore_ ), iter, TEMPLATE, templateText, -1 );
+    }
+   if (helpText != NULL)
+    {
+        gtk_tree_model_get( GTK_TREE_MODEL( _priv->pListStore_ ), iter, HELP, helpText, -1 );
+    }
+   return TRUE;
+}
+
 // Public functions
 GtkWidget* template_chooser_new( Logger* pLogger, const gchar* workingDirectory )
 {
@@ -162,54 +196,79 @@ GtkWidget* template_chooser_new( Logger* pLogger, const gchar* workingDirectory 
     return _pComboBox;
 } 
 
-gchar* template_chooser_get_template_name( TemplateChooser* templatechooser )
+gchar* template_chooser_get_template_name( TemplateChooser* templateChooser )
 {
-    TemplateChooserPrivate* _priv = TEMPLATE_CHOOSER_GET_PRIVATE( templatechooser );
-
     GtkTreeIter _iter;
     gchar* _templateName = NULL;
-    if ( gtk_combo_box_get_active_iter( GTK_COMBO_BOX( templatechooser ), &_iter ) )
+    if ( !template_chooser_get_current_values( templateChooser, &_iter, NULL, &_templateName, NULL, NULL ) )
     {
-        gtk_tree_model_get( GTK_TREE_MODEL( _priv->pListStore_ ), &_iter, KEY, &_templateName, -1 );
+        g_free( _templateName );
+        return NULL;
     }
- 
-    return _templateName;
+    else
+    {
+        return _templateName;
+    }
 }
 
-gchar* template_chooser_get_template( TemplateChooser* templatechooser, int* id )
+gchar* template_chooser_get_template( TemplateChooser* templateChooser, int* id )
 {
-    TemplateChooserPrivate* _priv = TEMPLATE_CHOOSER_GET_PRIVATE( templatechooser );
-
     GtkTreeIter _iter;
-    gchar* _template = NULL;
-    int _id = -1;
-    if ( gtk_combo_box_get_active_iter( GTK_COMBO_BOX( templatechooser ), &_iter ) )
+    gchar* _templateText = NULL;
+    if ( !template_chooser_get_current_values( templateChooser, &_iter, id, NULL, &_templateText, NULL ) )
     {
-        gtk_tree_model_get( GTK_TREE_MODEL( _priv->pListStore_ ), &_iter, TEMPLATE, &_template, ID, &_id, -1 );
+        g_free( _templateText );
+        return NULL;
     }
- 
-    if (id != NULL)
+    else
     {
-        *id = _id;
+        return _templateText;
     }
-    return _template;
 }
 
-gchar* template_chooser_get_help_text( TemplateChooser* templatechooser , int* id )
+gchar* template_chooser_get_help_text( TemplateChooser* templateChooser , int* id )
 {
-    TemplateChooserPrivate* _priv = TEMPLATE_CHOOSER_GET_PRIVATE( templatechooser );
-
     GtkTreeIter _iter;
     gchar* _helpText = NULL;
+    if ( !template_chooser_get_current_values( templateChooser, &_iter, id, NULL, NULL, &_helpText ) )
+    {
+        g_free( _helpText );
+        return NULL;
+    }
+    else
+    {
+        return _helpText;
+    }
+}
+
+void template_chooser_save_changes( TemplateChooser* templateChooser )
+{
+    TemplateChooserPrivate* _priv = TEMPLATE_CHOOSER_GET_PRIVATE( templateChooser );  
+    template_list_store_export_file( _priv->pListStore_ ); 
+}
+
+void template_chooser_update_template( TemplateChooser* templateChooser, const gchar* text, int id )
+{
+    TemplateChooserPrivate* _priv = TEMPLATE_CHOOSER_GET_PRIVATE( templateChooser );
+    GtkTreeIter _iter;
     int _id = -1;
-    if ( gtk_combo_box_get_active_iter( GTK_COMBO_BOX( templatechooser ), &_iter ) )
+    gchar* _templateName;
+
+    template_chooser_get_current_values( templateChooser, &_iter, &_id, &_templateName, NULL, NULL );
+    if (_id == id)
     {
-        gtk_tree_model_get( GTK_TREE_MODEL( _priv->pListStore_ ), &_iter, HELP, &_helpText, ID, &_id, -1 );
+        gtk_list_store_set( GTK_LIST_STORE( _priv->pListStore_ ), &_iter, TEMPLATE, text, -1 );
+        _priv->pLogger_->Debug( g_strdup_printf( "Template for '%s' has been updated", _templateName ) );
     }
- 
-    if (id != NULL)
+    else
     {
-        *id = _id;
+        _priv->pLogger_->Debug( g_strdup_printf( "Template id %d not updated - selection has changed", id ) );
     }
-    return _helpText;
+
+    g_free( _templateName );
+}
+
+void template_chooser_update_help_text( TemplateChooser* templateChooser, const gchar* text, int id )
+{
+    TemplateChooserPrivate* _priv = TEMPLATE_CHOOSER_GET_PRIVATE( templateChooser );
 }

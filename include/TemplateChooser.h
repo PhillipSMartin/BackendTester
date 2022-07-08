@@ -41,9 +41,15 @@ GType template_chooser_get_type( void ) G_GNUC_CONST;
 GtkWidget* template_chooser_new( Logger* logger, const char* workingDirectory );
 
 // retrieves fields from active selection
-// caller assumes ownership of the cstrings and must free them
-gchar* template_chooser_get_template_name( TemplateChooser* templatechooser );
-gchar* template_chooser_get_template( TemplateChooser* templatechooser, int* id );
-gchar* template_chooser_get_help_text( TemplateChooser* templatechooser, int* id );
+// caller assumes ownership of the string and must free it
+gchar* template_chooser_get_template_name( TemplateChooser* templateChooser );
+gchar* template_chooser_get_template( TemplateChooser* templateChooser, int* id );
+gchar* template_chooser_get_help_text( TemplateChooser* templateChooser, int* id );
+
+void template_chooser_save_changes( TemplateChooser* templateChooser );
+
+// caller retains ownership of the string
+void template_chooser_update_template( TemplateChooser* templateChooser, const gchar* text, int id );
+void template_chooser_update_help_text( TemplateChooser* templateChooser, const gchar* text, int id );
 
 G_END_DECLS

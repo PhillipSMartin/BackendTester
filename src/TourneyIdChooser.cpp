@@ -81,6 +81,7 @@ static void tourney_id_chooser_init( TourneyIdChooser* tourneyIdChooser )
     
     _priv->pTourneyIdEntry_ = gtk_entry_new();
     _priv->pUpdateButton_ = gtk_button_new_with_label( "Update" );
+    gtk_widget_set_sensitive( _priv->pUpdateButton_, FALSE );
 
     gtk_box_pack_start( GTK_BOX( tourneyIdChooser ), gtk_label_new( "Tourney Id: " ), FALSE, TRUE, 0 );
     gtk_box_pack_start( GTK_BOX( tourneyIdChooser ), _priv->pTourneyIdEntry_, TRUE, TRUE, 0);

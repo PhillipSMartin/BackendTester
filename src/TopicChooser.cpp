@@ -26,6 +26,7 @@ static const gchar* topic_chooser_topics[4] = { "Event.tb", "Event.tm", "State.t
 static void topic_chooser_class_init( TopicChooserClass* klass );
 static void topic_chooser_init( TopicChooser* topicChooser );
 static void topic_chooser_on_combo_box_changed( GtkComboBox* comboBox, TopicChooser* topicChooser );
+static void topic_chooser_on_spin_button_value_changed( GtkSpinButton* spinButton, TopicChooser* topicChooser );
 
 // Type registration
 GType topic_chooser_get_type( void )
@@ -94,9 +95,15 @@ static void topic_chooser_init( TopicChooser* topicChooser )
     }
 
     g_signal_connect( G_OBJECT( _priv->pTopicPrefixComboBox_ ), "changed", G_CALLBACK( topic_chooser_on_combo_box_changed ), gpointer( topicChooser ) );
+    g_signal_connect( G_OBJECT( _priv->pTableNumberSpinButton_ ), "value-changed", G_CALLBACK( topic_chooser_on_spin_button_value_changed ), gpointer( topicChooser ) );
 }
 
 static void topic_chooser_on_combo_box_changed( GtkComboBox* comboBox, TopicChooser* topicChooser )
+{
+    g_signal_emit_by_name( G_OBJECT( topicChooser ), "changed" );
+}
+
+static void topic_chooser_on_spin_button_value_changed( GtkSpinButton* spinButton, TopicChooser* topicChooser )
 {
     g_signal_emit_by_name( G_OBJECT( topicChooser ), "changed" );
 }
